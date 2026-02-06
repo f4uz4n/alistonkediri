@@ -1,0 +1,9 @@
+<?= $this->extend('layouts/main') ?>
+
+<?= $this->section('content') ?>
+<div class="row align-items-center mb-5">
+    <div class="col-12 col-md-6">
+        <h2 class="fw-800 text-dark mb-1">Laporan Pembayaran</h2>
+        <p class="text-secondary mb-0">Pantau progres pelunasan biaya jamaah Anda</p>
+    </div>
+</div>

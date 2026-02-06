@@ -1,0 +1,71 @@
+<?php
+
+namespace App\Models;
+
+use CodeIgniter\Model;
+
+class ParticipantModel extends Model
+{
+    protected $table = 'participants';
+    protected $primaryKey = 'id';
+    protected $useAutoIncrement = true;
+    protected $returnType = 'array';
+    protected $useSoftDeletes = false;
+    protected $protectFields = true;
+    protected $allowedFields = [
+        'package_id', 'agency_id', 'nik', 'name', 'place_of_birth',
+        'date_of_birth', 'gender', 'address', 'rt_rw', 'kelurahan',
+        'kecamatan', 'kabupaten', 'provinsi', 'religion',
+        'marital_status', 'occupation', 'blood_type', 'nationality',
+        'phone', 'status', 'is_verified', 'verified_at', 'verified_by',
+        'passport_number', 'passport_issuance_date', 'passport_expiry_date',
+        'passport_issuance_city', 'emergency_name', 'emergency_relationship',
+        'emergency_phone', 'checklist'
+    ];
+
+    // Dates
+    protected $useTimestamps = true;
+    protected $dateFormat = 'datetime';
+    protected $createdField = 'created_at';
+    protected $updatedField = 'updated_at';
+
+    public function getParticipantsWithDetails()
+    {
+        return $this->select('participants.*, travel_packages.name as package_name, travel_packages.price as package_price, users.full_name as agency_name, users.username as agency_username')
+            ->join('travel_packages', 'travel_packages.id = participants.package_id')
+            ->join('users', 'users.id = participants.agency_id')
+            ->orderBy('participants.created_at', 'DESC')
+            ->findAll();
+    }
+
+    public function getFilteredParticipants($filters = [])
+    {
+        $builder = $this->select('participants.*, travel_packages.name as package_name, users.full_name as agency_name')
+            ->join('travel_packages', 'travel_packages.id = participants.package_id')
+            ->join('users', 'users.id = participants.agency_id');
+
+        if (!empty($filters['start_date'])) {
+            $builder->where('participants.created_at >=', $filters['start_date'] . ' 00:00:00');
+        }
+        if (!empty($filters['end_date'])) {
+            $builder->where('participants.created_at <=', $filters['end_date'] . ' 23:59:59');
+        }
+        if (!empty($filters['agency_id'])) {
+            $builder->where('participants.agency_id', $filters['agency_id']);
+        }
+        if (!empty($filters['package_id'])) {
+            $builder->where('participants.package_id', $filters['package_id']);
+        }
+
+        return $builder->orderBy('participants.created_at', 'DESC')->findAll();
+    }
+
+    public function getRegistrationTrends($days = 30)
+    {
+        return $this->select("DATE(created_at) as date, COUNT(id) as total")
+            ->where('created_at >=', date('Y-m-d', strtotime("-$days days")))
+            ->groupBy("DATE(created_at)")
+            ->orderBy("DATE(created_at)", "ASC")
+            ->findAll();
+    }
+}

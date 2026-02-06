@@ -1,0 +1,23 @@
+    public function participants()
+    {
+        $participantModel = new \App\Models\ParticipantModel();
+        $participants = $participantModel->select('participants.*, travel_packages.name as package_name, travel_packages.freebies')
+            ->join('travel_packages', 'travel_packages.id = participants.package_id')
+            ->where('participants.agency_id', session()->get('id'))
+            ->orderBy('participants.created_at', 'DESC')
+            ->findAll();
+
+        $db = \Config\Database::connect();
+        $equipmentModel = new \App\Models\EquipmentModel();
+
+        foreach ($participants as &$p) {
+            $p['doc_count'] = $db->table('participant_documents')->where('participant_id', $p['id'])->countAllResults();
+            $p['doc_total'] = 3;
+            $freebies = json_decode($p['freebies'], true) ?? [];
+            $p['equip_total'] = count($freebies);
+            $p['equip_count'] = $equipmentModel->where('participant_id', $p['id'])->where('status', 'collected')->countAllResults();
+        }
+
+        $data = ['participants' => $participants];
+        return view('agency/participants', $data);
+    }

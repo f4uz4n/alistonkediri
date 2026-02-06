@@ -1,0 +1,60 @@
+            <div class="row g-4 mb-5">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-success text-white py-4 px-4">
+                            <h5 class="fw-bold mb-0"><i class="bi bi-whatsapp me-2"></i>Kontak Aktif</h5>
+                        </div>
+                        <div class="card-body p-4 p-md-5">
+                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Nomor WhatsApp Jamaah</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0"><i class="bi bi-phone"></i></span>
+                                <input type="text" name="phone" class="form-control form-control-lg bg-light border-0 rounded-end" placeholder="0812..." required value="<?= old('phone', $participant['phone']) ?>">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-warning text-dark py-4 px-4">
+                            <h5 class="fw-bold mb-0"><i class="bi bi-file-earmark-medical-fill me-2"></i>Update Dokumen</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">Foto Paspor</label>
+                                <?php if(isset($documents['passport'])): ?>
+                                    <div class="mb-2">
+                                        <a href="<?= base_url($documents['passport']) ?>" target="_blank" class="badge bg-primary text-decoration-none">Lihat Paspor Saat Ini</a>
+                                    </div>
+                                <?php endif; ?>
+                                <input type="file" name="passport" class="form-control form-control-sm bg-light">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">Foto KTP</label>
+                                <?php if(isset($documents['id_card'])): ?>
+                                    <div class="mb-2">
+                                        <a href="<?= base_url($documents['id_card']) ?>" target="_blank" class="badge bg-primary text-decoration-none">Lihat KTP Saat Ini</a>
+                                    </div>
+                                <?php endif; ?>
+                                <input type="file" name="id_card" class="form-control form-control-sm bg-light">
+                            </div>
+                            <div>
+                                <label class="form-label small fw-bold text-secondary">Kartu Vaksin</label>
+                                <?php if(isset($documents['vaccine'])): ?>
+                                    <div class="mb-2">
+                                        <a href="<?= base_url($documents['vaccine']) ?>" target="_blank" class="badge bg-primary text-decoration-none">Lihat Vaksin Saat Ini</a>
+                                    </div>
+                                <?php endif; ?>
+                                <input type="file" name="vaccine" class="form-control form-control-sm bg-light">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-premium w-100 rounded-pill py-3 shadow-lg fs-4 fw-bold mb-5">
+                <i class="bi bi-check2-circle me-2"></i> Simpan Perubahan
+            </button>
+        </form>
+    </div>
+</div>
+<?= $this->endSection() ?>
