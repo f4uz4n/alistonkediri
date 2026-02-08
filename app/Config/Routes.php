@@ -5,7 +5,11 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
-$routes->get('/', 'Auth::login');
+$routes->get('/', 'Home::index');
+$routes->get('package/(:num)', 'Home::packageDetail/$1');
+$routes->get('agen-mitra', 'Home::agenMitra');
+$routes->get('testimoni-jamaah', 'Home::testimoni');
+$routes->post('testimoni-jamaah/submit', 'Home::submitTestimoni');
 $routes->get('login', 'Auth::login');
 $routes->post('auth/login', 'Auth::attemptLogin');
 $routes->get('logout', 'Auth::logout');
@@ -18,6 +22,9 @@ $routes->group('owner', ['filter' => 'auth:owner'], function ($routes) {
             $routes->get('/', 'Owner::materials');
             $routes->get('create', 'Owner::uploadMaterial');
             $routes->post('store', 'Owner::storeMaterial');
+            $routes->get('edit/(:num)', 'Owner::editMaterial/$1');
+            $routes->post('update/(:num)', 'Owner::updateMaterial/$1');
+            $routes->get('delete/(:num)', 'Owner::deleteMaterial/$1');
         }
         );
 
@@ -32,19 +39,83 @@ $routes->group('owner', ['filter' => 'auth:owner'], function ($routes) {
         }
         );
 
+        // Master Kota
+        $routes->group('cities', function ($routes) {
+            $routes->get('/', 'City::index');
+            $routes->get('create', 'City::create');
+            $routes->post('store', 'City::store');
+            $routes->get('edit/(:num)', 'City::edit/$1');
+            $routes->post('update/(:num)', 'City::update/$1');
+            $routes->get('delete/(:num)', 'City::delete/$1');
+        });
+
+        // Hotel Management
+        $routes->group('hotels', function ($routes) {
+            $routes->get('/', 'Hotel::index');
+            $routes->get('create', 'Hotel::create');
+            $routes->post('store', 'Hotel::store');
+            $routes->get('edit/(:num)', 'Hotel::edit/$1');
+            $routes->post('update/(:num)', 'Hotel::update/$1');
+
+            // Rooms
+            $routes->get('(:num)/rooms', 'Hotel::rooms/$1');
+            $routes->post('rooms/store', 'Hotel::storeRoom');
+            $routes->post('rooms/store-multiple', 'Hotel::storeRooms');
+            $routes->get('rooms/edit/(:num)', 'Hotel::editRoom/$1');
+            $routes->post('rooms/update/(:num)', 'Hotel::updateRoom/$1');
+            $routes->get('rooms/delete/(:num)', 'Hotel::deleteRoom/$1');
+        }
+        );
+
         // Participant Management
         $routes->group('participant', function ($routes) {
             $routes->get('/', 'Participant::index');
+            $routes->get('kelola/(:num)', 'Participant::kelola/$1');
+            $routes->post('update-schedule', 'Participant::updateSchedule');
             $routes->get('documents', 'Participant::documents');
             $routes->get('documents/(:num)', 'Participant::documents/$1');
             $routes->post('update-checklist', 'Participant::updateChecklist');
             $routes->post('verify-document', 'Participant::verifyDocument');
             $routes->post('upload-document', 'Participant::uploadDocument');
             $routes->get('receipt/(:num)', 'Participant::receipt/$1');
+            $routes->get('registration-form/(:num)', 'Participant::registrationFormPrint/$1');
             $routes->get('transaction-receipt/(:num)', 'Participant::transactionReceipt/$1');
             $routes->get('payment-history/(:num)', 'Participant::paymentHistory/$1');
+            $routes->get('get-upgrade-options/(:num)', 'Participant::getUpgradeOptions/$1');
+            $routes->post('save-upgrade', 'Participant::saveUpgrade');
+
+            // Boarding
+            $routes->get('boarding', 'Participant::boarding');
+            $routes->get('boarding-list', 'Participant::boardingList');
+            $routes->get('boarding-list-print', 'Participant::boardingListPrint');
+            $routes->post('process-boarding', 'Participant::processBoarding');
+            $routes->post('confirm-boarding', 'Participant::confirmBoarding');
+            $routes->get('boarding-manifest/(:num)', 'Participant::boardingManifest/$1');
+
+            // Pembatalan
+            $routes->get('cancellations', 'Participant::cancellations');
+            $routes->get('cancel-form/(:num)', 'Participant::cancelForm/$1');
+            $routes->post('store-cancellation', 'Participant::storeCancellation');
+
+            // Registrasi dari Kantor (route dengan (:num) harus di atas agar tidak tertimpa)
+            $routes->get('register/(:num)', 'Participant::registerFromOfficeForm/$1');
+            $routes->get('register', 'Participant::registerFromOffice');
+            $routes->post('store-registration-office', 'Participant::storeRegistrationFromOffice');
+
+            // Tambah Pembayaran dari Kantor
+            $routes->get('add-payment/(:num)', 'Participant::addPayment/$1');
+            $routes->post('store-payment-office', 'Participant::storePaymentFromOffice');
         }
         );
+
+        // Tabungan Perjalanan
+        $routes->get('tabungan', 'Tabungan::index');
+        $routes->get('tabungan/create', 'Tabungan::create');
+        $routes->post('tabungan/store', 'Tabungan::store');
+        $routes->get('tabungan/deposit/(:num)', 'Tabungan::addDeposit/$1');
+        $routes->post('tabungan/store-deposit', 'Tabungan::storeDeposit');
+        $routes->get('tabungan/claim/(:num)', 'Tabungan::claimForm/$1');
+        $routes->post('tabungan/do-claim', 'Tabungan::doClaim');
 
         // Reports
         $routes->get('reports', 'Reports::index');
@@ -59,6 +130,18 @@ $routes->group('owner', ['filter' => 'auth:owner'], function ($routes) {
         // Participant Verification & Checklist
         $routes->get('checklist/(:num)', 'Owner::checklist/$1');
         $routes->post('verify-participant', 'Owner::verifyParticipant');
+
+        // Testimoni Jamaah (verifikasi)
+        $routes->get('testimoni', 'Owner::testimoni');
+        $routes->get('testimoni/edit/(:num)', 'Owner::editTestimoni/$1');
+        $routes->post('testimoni/update/(:num)', 'Owner::updateTestimoni/$1');
+        $routes->post('testimoni/delete/(:num)', 'Owner::deleteTestimoni/$1');
+        $routes->post('testimoni/verify/(:num)', 'Owner::verifyTestimoni/$1');
+
+        // Banner (slider halaman login)
+        $routes->get('banners', 'Owner::banners');
+        $routes->post('banners/store', 'Owner::storeBanner');
+        $routes->get('banners/delete/(:num)', 'Owner::deleteBanner/$1');
     });
 
 $routes->group('package', ['filter' => 'auth:owner'], function ($routes) {
@@ -73,6 +156,8 @@ $routes->group('package', ['filter' => 'auth:owner'], function ($routes) {
 $routes->group('agency', ['filter' => 'auth:agency'], function ($routes) {
     $routes->get('/', 'Agency::index');
 
+    // Materi Promosi
+    $routes->get('materials', 'Agency::materials');
     // Package Browsing & Registration
     $routes->get('packages', 'Agency::packages');
     $routes->get('package-detail/(:num)', 'Agency::packageDetail/$1');
@@ -83,15 +168,25 @@ $routes->group('agency', ['filter' => 'auth:agency'], function ($routes) {
     $routes->get('participants', 'Agency::participants');
     $routes->get('edit-participant/(:num)', 'Agency::editParticipant/$1');
     $routes->post('update-participant/(:num)', 'Agency::updateParticipant/$1');
-    $routes->get('checklist/(:num)', 'Agency::checklist/$1');
-    $routes->post('toggle-equipment', 'Agency::toggleEquipment');
+    $routes->get('registration-form/(:num)', 'Agency::registrationFormPrint/$1');
+    $routes->get('documents/(:num)', 'Agency::documents/$1');
+    $routes->post('update-documents', 'Agency::updateDocuments');
+    $routes->post('upload-document', 'Agency::uploadDocument');
 
     // Payment Installments
     $routes->get('payments', 'Agency::payments');
     $routes->get('payment-detail/(:num)', 'Agency::paymentDetail/$1');
+    $routes->get('receipt/(:num)', 'Agency::receipt/$1');
+    $routes->get('transaction-receipt/(:num)', 'Agency::transactionReceipt/$1');
     $routes->post('store-payment', 'Agency::storePayment');
     // Income Report
     $routes->get('income', 'Agency::income');
+    // Profil agency
+    $routes->get('profile', 'Agency::profile');
+    $routes->post('update-profile', 'Agency::updateProfile');
+    // Testimoni Jamaah (input form)
+    $routes->get('testimoni', 'Agency::testimoni');
+    $routes->post('testimoni/submit', 'Agency::submitTestimoni');
 });
 // Equipment/Attribute Management
 $routes->group('owner/equipment', ['filter' => 'auth'], function ($routes) {
@@ -109,5 +204,7 @@ $routes->group('owner/equipment', ['filter' => 'auth'], function ($routes) {
 // Commission Management
 $routes->group('owner/commissions', ['filter' => 'auth'], function ($routes) {
     $routes->get('/', 'Commission::index');
+    $routes->get('print/(:num)', 'Commission::printSlip/$1');
     $routes->post('update/(:num)', 'Commission::updateProgress/$1');
+    $routes->post('verify-by-departure', 'Commission::verifyByDeparture');
 });

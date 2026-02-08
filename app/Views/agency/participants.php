@@ -98,9 +98,12 @@
                                 </div>
                             </td>
                             <td class="pe-4 text-end">
-                                <div class="d-flex gap-2 justify-content-end">
-                                    <a href="<?= base_url('agency/checklist/'.$p['id']) ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                                        <i class="bi bi-list-check me-1"></i> Cek List
+                                <div class="d-flex gap-2 justify-content-end flex-wrap">
+                                    <a href="<?= base_url('agency/registration-form/'.$p['id']) ?>" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                        <i class="bi bi-printer me-1"></i> Cetak Formulir
+                                    </a>
+                                    <a href="<?= base_url('agency/documents/'.$p['id']) ?>" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                                        <i class="bi bi-file-earmark-check me-1"></i> Melengkapi Berkas
                                     </a>
                                     <a href="<?= base_url('agency/edit-participant/'.$p['id']) ?>" class="btn btn-sm btn-light border rounded-pill px-3">
                                         <i class="bi bi-pencil-square me-1"></i> Edit

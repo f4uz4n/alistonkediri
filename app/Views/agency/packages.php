@@ -1,6 +1,7 @@
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('content') ?>
+<?php helper('package'); ?>
 <div class="row align-items-center mb-5">
     <div class="col-12 col-md-6">
         <h2 class="fw-800 text-dark mb-1">Paket Perjalanan</h2>
@@ -32,7 +33,7 @@
                             <img src="<?= get_company_logo() ?>" alt="Logo" style="width: 35px;">
                         </div>
                         <div class="bg-white rounded-4 shadow-sm px-4 py-2 border">
-                            <h3 class="fw-800 text-primary mb-0"><?= esc($package['price']) ?><small class="fs-6 ms-1"><?= esc($package['price_unit']) ?></small></h3>
+                            <h3 class="fw-800 text-primary mb-0"><?= format_price_display($package['price']) ?></h3>
                         </div>
                     </div>
                 </div>
@@ -53,12 +54,14 @@
                     <div class="bg-light rounded-3 p-3 mb-4">
                         <div class="row text-center">
                             <div class="col-6 border-end">
-                                <small class="text-secondary d-block">Mekkah</small>
-                                <span class="fw-bold text-dark small"><?= esc($package['hotel_mekkah']) ?></span>
+                                <?php $d1 = $package['display_hotel_1'] ?? null; ?>
+                                <small class="text-secondary d-block"><?= $d1 && $d1['city'] ? esc($d1['city']) : esc($city1_name ?? 'Kota 1') ?></small>
+                                <span class="fw-bold text-dark small"><?= $d1 ? esc($d1['name']) : esc($package['hotel_mekkah'] ?? '—') ?></span>
                             </div>
                             <div class="col-6">
-                                <small class="text-secondary d-block">Madinah</small>
-                                <span class="fw-bold text-dark small"><?= esc($package['hotel_madinah']) ?></span>
+                                <?php $d2 = $package['display_hotel_2'] ?? null; ?>
+                                <small class="text-secondary d-block"><?= $d2 && $d2['city'] ? esc($d2['city']) : esc($city2_name ?? 'Kota 2') ?></small>
+                                <span class="fw-bold text-dark small"><?= $d2 ? esc($d2['name']) : esc($package['hotel_madinah'] ?? '—') ?></span>
                             </div>
                         </div>
                     </div>

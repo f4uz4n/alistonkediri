@@ -29,6 +29,24 @@
             </div>
         <?php endif; ?>
 
+        <?php $is_lunas = (float)$total_paid >= (float)$participant['price']; ?>
+        <?php if ($is_lunas): ?>
+        <div class="card border-0 shadow-sm rounded-4 mb-4 bg-success bg-opacity-10 border border-success border-opacity-25">
+            <div class="card-body py-4 px-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div class="d-flex align-items-center">
+                    <span class="rounded-circle bg-success bg-opacity-25 p-3 me-3"><i class="bi bi-check2-circle text-success fs-4"></i></span>
+                    <div>
+                        <h6 class="fw-bold text-dark mb-1">Pembayaran Lunas</h6>
+                        <p class="text-secondary small mb-0">Total terbayar Rp <?= number_format((float)$total_paid, 0, ',', '.') ?> — cetak kwitansi lunas untuk arsip.</p>
+                    </div>
+                </div>
+                <a href="<?= base_url('agency/receipt/'.$participant['id']) ?>" target="_blank" class="btn btn-success rounded-pill px-4 fw-bold">
+                    <i class="bi bi-printer me-2"></i> Cetak Pembayaran Lunas
+                </a>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <div class="row g-4 mb-5">
             <div class="col-md-4">
                 <div class="card border-0 shadow-sm rounded-4 bg-primary text-white p-4 h-100">
@@ -40,15 +58,17 @@
             <div class="col-md-8">
                 <div class="card border-0 shadow-sm rounded-4 p-4 h-100 bg-white">
                     <h5 class="fw-bold text-dark mb-3">Lapor Cicilan Baru</h5>
-                    <form action="<?= base_url('agency/store-payment') ?>" method="post" enctype="multipart/form-data" class="row g-3">
+                    <form action="<?= base_url('agency/store-payment') ?>" method="post" enctype="multipart/form-data" class="row g-3" id="formCicilan">
                         <?= csrf_field() ?>
                         <input type="hidden" name="participant_id" value="<?= $participant['id'] ?>">
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Nominal Bayar</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light border-0">Rp</span>
-                                <input type="number" name="amount" class="form-control bg-light border-0" placeholder="0" required>
+                                <input type="text" name="amount_display" id="amount_display" class="form-control bg-light border-0" placeholder="0" required autocomplete="off">
+                                <input type="hidden" name="amount" id="amount" value="">
                             </div>
+                            <small class="text-muted">Format: 1.500.000</small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Tanggal Bayar</label>
@@ -86,12 +106,13 @@
                                 <th>Bukti</th>
                                 <th>Status</th>
                                 <th>Catatan</th>
+                                <th class="text-end pe-4">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if(empty($installments)): ?>
                                 <tr>
-                                    <td colspan="5" class="text-center py-4 text-secondary italic">Belum ada riwayat cicilan</td>
+                                    <td colspan="6" class="text-center py-4 text-secondary italic">Belum ada riwayat cicilan</td>
                                 </tr>
                             <?php else: ?>
                                 <?php foreach($installments as $ins): ?>
@@ -99,9 +120,13 @@
                                     <td class="ps-4"><?= date('d M Y', strtotime($ins['payment_date'])) ?></td>
                                     <td class="fw-bold">Rp <?= number_format((float)$ins['amount'], 0, ',', '.') ?></td>
                                     <td>
+                                        <?php if(!empty($ins['proof'])): ?>
                                         <a href="<?= base_url($ins['proof']) ?>" target="_blank" class="text-decoration-none small fw-bold">
                                             <i class="bi bi-image me-1"></i> Lihat Bukti
                                         </a>
+                                        <?php else: ?>
+                                        <span class="text-muted small">—</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <?php if($ins['status'] == 'pending'): ?>
@@ -113,6 +138,15 @@
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-secondary small"><?= esc($ins['notes']) ?></td>
+                                    <td class="text-end pe-4">
+                                        <?php if($ins['status'] == 'verified'): ?>
+                                        <a href="<?= base_url('agency/transaction-receipt/'.$ins['id']) ?>" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3" title="Cetak Kwitansi">
+                                            <i class="bi bi-printer me-1"></i> Cetak Kwitansi
+                                        </a>
+                                        <?php else: ?>
+                                        <span class="text-muted small">—</span>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -123,4 +157,46 @@
         </div>
     </div>
 </div>
+
+<script>
+(function() {
+    var display = document.getElementById('amount_display');
+    var hidden = document.getElementById('amount');
+    var form = document.getElementById('formCicilan');
+
+    function formatRupiah(n) {
+        var u = parseInt(n, 10) || 0;
+        return u.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    function parseRupiah(s) {
+        return (s || '').replace(/\D/g, '');
+    }
+
+    display.addEventListener('input', function() {
+        var raw = parseRupiah(this.value);
+        hidden.value = raw;
+        var cursor = this.selectionStart;
+        var prevLen = this.value.length;
+        this.value = raw ? formatRupiah(raw) : '';
+        var newLen = this.value.length;
+        var newCursor = Math.max(0, cursor + (newLen - prevLen));
+        this.setSelectionRange(newCursor, newCursor);
+    });
+
+    display.addEventListener('blur', function() {
+        if (hidden.value) this.value = formatRupiah(hidden.value);
+    });
+
+    form.addEventListener('submit', function() {
+        var raw = parseRupiah(display.value);
+        hidden.value = raw;
+        if (!raw || parseInt(raw, 10) < 1) {
+            alert('Nominal bayar harus diisi dan lebih dari 0.');
+            display.focus();
+            return false;
+        }
+    });
+})();
+</script>
 <?= $this->endSection() ?>

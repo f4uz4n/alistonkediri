@@ -7,9 +7,15 @@
         <p class="text-muted mb-0">Verifikasi berkas dan kelola pengambilan perlengkapan untuk <strong><?= esc($participant['name']) ?></strong></p>
     </div>
     <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        <?php if (!empty($is_owner)): ?>
+        <a href="<?= base_url('owner/participant/kelola/' . $participant['id']) ?>" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="fas fa-arrow-left me-2"></i>Kembali ke Kelola
+        </a>
+        <?php else: ?>
         <a href="<?= base_url('agency/participants') ?>" class="btn btn-outline-secondary rounded-pill px-4">
             <i class="fas fa-arrow-left me-2"></i>Kembali
         </a>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -94,7 +100,7 @@
                 </div>
 
                 <div class="mt-4 pt-2">
-                    <a href="<?= base_url('agency/edit-participant/'.$participant['id']) ?>" class="btn btn-primary rounded-pill px-4 fw-bold w-100">
+                    <a href="<?= !empty($is_owner) ? base_url('owner/participant/documents/'.$participant['id']) : base_url('agency/edit-participant/'.$participant['id']) ?>" class="btn btn-primary rounded-pill px-4 fw-bold w-100">
                         <i class="fas fa-upload me-2"></i>Kelola Berkas Digital
                     </a>
                 </div>
@@ -110,25 +116,41 @@
                 <i class="fas fa-shield-alt position-absolute" style="font-size: 8rem; right: -20px; top: -20px; opacity: 0.1;"></i>
                 <h5 class="fw-bold mb-3">Status Verifikasi Jamaah</h5>
                 <?php if ($participant['is_verified']): ?>
-                    <div class="d-flex align-items-center mb-4">
+                    <div class="d-flex align-items-center mb-3">
                         <div class="icon-box bg-white text-success rounded-circle me-3">
                             <i class="fas fa-check-circle fa-2x"></i>
                         </div>
                         <div>
                             <span class="badge bg-white text-success rounded-pill px-3 mb-1">TERVERIFIKASI</span>
-                            <p class="mb-0 small opacity-75">Data telah diperiksa oleh pusat pada <?= date('d M Y', strtotime($participant['verified_at'])) ?></p>
+                            <p class="mb-0 small opacity-75">Data telah diperiksa oleh pusat pada <?= !empty($participant['verified_at']) ? date('d M Y', strtotime($participant['verified_at'])) : '-' ?></p>
                         </div>
                     </div>
+                    <?php if (!empty($is_owner)): ?>
+                    <form action="<?= base_url('owner/verify-participant') ?>" method="post" class="mt-3">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="id" value="<?= $participant['id'] ?>">
+                        <input type="hidden" name="status" value="pending">
+                        <button type="submit" class="btn btn-outline-light btn-sm rounded-pill">Batalkan Verifikasi</button>
+                    </form>
+                    <?php endif; ?>
                 <?php else: ?>
-                    <div class="d-flex align-items-center mb-4">
+                    <div class="d-flex align-items-center mb-3">
                         <div class="icon-box bg-white text-warning rounded-circle me-3">
                             <i class="fas fa-clock fa-2x"></i>
                         </div>
                         <div>
                             <span class="badge bg-white text-warning rounded-pill px-3 mb-1">MENUNGGU VERIFIKASI</span>
-                            <p class="mb-0 small opacity-75">Lengkapi semua data dan berkas agar admin pusat dapat melakukan verifikasi.</p>
+                            <p class="mb-0 small opacity-75">Lengkapi data dan berkas, lalu verifikasi dari menu ini (admin).</p>
                         </div>
                     </div>
+                    <?php if (!empty($is_owner)): ?>
+                    <form action="<?= base_url('owner/verify-participant') ?>" method="post" class="mt-3">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="id" value="<?= $participant['id'] ?>">
+                        <input type="hidden" name="status" value="verified">
+                        <button type="submit" class="btn btn-light rounded-pill px-4 fw-bold"><i class="fas fa-check me-2"></i>Verifikasi Pendaftaran Jamaah</button>
+                    </form>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>

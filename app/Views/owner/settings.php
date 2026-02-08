@@ -58,7 +58,15 @@
                         <?php endif; ?>
                     </div>
                     <input type="file" name="company_logo" class="form-control form-control-sm bg-light border-0 rounded-pill" accept="image/*">
-                    <small class="text-muted d-block mt-2">Digunakan pada laporan & struk</small>
+                    <small class="text-muted d-block mt-2">Digunakan pada laporan, struk & kwitansi</small>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 mt-4">
+                <div class="card-body p-4">
+                    <h6 class="text-secondary small fw-bold text-uppercase ls-1 mb-3 text-start">Nama PT / Perusahaan</h6>
+                    <input type="text" name="company_name" class="form-control form-control-lg bg-light border-0 rounded-3" value="<?= esc($user['company_name'] ?? '') ?>" placeholder="Contoh: PT Aliston Tour & Travel">
+                    <small class="text-muted d-block mt-2">Muncul di kop kwitansi & slip komisi</small>
                 </div>
             </div>
         </div>
@@ -72,8 +80,9 @@
                 <div class="card-body p-4 p-md-5">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Nama Lengkap</label>
+                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Nama Lengkap (Nama Direktur)</label>
                             <input type="text" name="full_name" class="form-control form-control-lg bg-light border-0 rounded-3" value="<?= esc($user['full_name']) ?>" required>
+                            <small class="text-muted">Digunakan sebagai nama direktur di kwitansi</small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Nomor HP / WhatsApp</label>

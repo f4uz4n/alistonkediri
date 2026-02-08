@@ -121,28 +121,76 @@
                 </div>
             </div>
             
-            <!-- Data Paspor -->
+            <!-- Data Paspor (sama dengan form pendaftaran) -->
             <div class="card border-0 shadow-sm rounded-4 mb-4">
                 <div class="card-header bg-info text-white py-4 px-4">
-                    <h5 class="fw-bold mb-0"><i class="bi bi-journal-text me-2"></i>Data Paspor</h5>
+                    <h5 class="fw-bold mb-0"><i class="bi bi-passport me-2"></i>Data Paspor</h5>
                 </div>
                 <div class="card-body p-4 p-md-5">
-                    <div class="row g-4">
+                    <?php $hp = (int)(old('has_passport', $participant['has_passport'] ?? 0)); ?>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Sudah punya paspor?</label>
+                        <div class="d-flex gap-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="has_passport" id="hasPassportYes" value="1" <?= $hp === 1 ? 'checked' : '' ?>>
+                                <label class="form-check-label fw-bold" for="hasPassportYes">Ya, sudah punya</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="has_passport" id="hasPassportNo" value="0" <?= $hp === 0 ? 'checked' : '' ?>>
+                                <label class="form-check-label fw-bold" for="hasPassportNo">Belum</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="passportFields" class="row g-4" style="display: <?= $hp === 1 ? 'flex' : 'none' ?>;">
+                        <div class="col-12"><hr class="my-2"><p class="small text-secondary mb-3">Isi data sesuai paspor</p></div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Jenis / Type Paspor</label>
+                            <select name="passport_type" class="form-select form-select-lg bg-light border-0 rounded-3">
+                                <option value="">Pilih</option>
+                                <option value="Paspor Biasa" <?= old('passport_type', $participant['passport_type'] ?? '') == 'Paspor Biasa' ? 'selected' : '' ?>>Paspor Biasa</option>
+                                <option value="Paspor Diplomatik" <?= old('passport_type', $participant['passport_type'] ?? '') == 'Paspor Diplomatik' ? 'selected' : '' ?>>Paspor Diplomatik</option>
+                                <option value="Paspor Dinas" <?= old('passport_type', $participant['passport_type'] ?? '') == 'Paspor Dinas' ? 'selected' : '' ?>>Paspor Dinas</option>
+                            </select>
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Nomor Paspor</label>
-                            <input type="text" name="passport_number" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="Nomor Paspor" value="<?= old('passport_number', $participant['passport_number']) ?>">
+                            <input type="text" name="passport_number" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="Nomor paspor" value="<?= old('passport_number', $participant['passport_number'] ?? '') ?>">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Kota Penerbitan</label>
-                            <input type="text" name="passport_issuance_city" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="Kota" value="<?= old('passport_issuance_city', $participant['passport_issuance_city']) ?>">
+                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Nama Lengkap (sesuai paspor)</label>
+                            <input type="text" name="passport_full_name" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="Nama di paspor" value="<?= old('passport_full_name', $participant['passport_full_name'] ?? '') ?>">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Tanggal Penerbitan</label>
-                            <input type="date" name="passport_issuance_date" class="form-control form-control-lg bg-light border-0 rounded-3" value="<?= old('passport_issuance_date', $participant['passport_issuance_date']) ?>">
+                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Nama Indonesia (nama IDN di paspor)</label>
+                            <input type="text" name="passport_name_idn" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="Nama Indonesia di paspor" value="<?= old('passport_name_idn', $participant['passport_name_idn'] ?? '') ?>">
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Kewarganegaraan</label>
+                            <input type="text" name="passport_nationality" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="cth: Indonesian" value="<?= old('passport_nationality', $participant['nationality'] ?? 'Indonesian') ?>">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Tempat Lahir (sesuai paspor)</label>
+                            <input type="text" name="passport_place_of_birth" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="cth: Jakarta" value="<?= old('passport_place_of_birth', $participant['passport_place_of_birth'] ?? '') ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Tanggal Diterbitkan</label>
+                            <input type="date" name="passport_issuance_date" class="form-control form-control-lg bg-light border-0 rounded-3" value="<?= old('passport_issuance_date', $participant['passport_issuance_date'] ?? '') ?>">
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Tanggal Habis Berlaku</label>
-                            <input type="date" name="passport_expiry_date" class="form-control form-control-lg bg-light border-0 rounded-3" value="<?= old('passport_expiry_date', $participant['passport_expiry_date']) ?>">
+                            <input type="date" name="passport_expiry_date" class="form-control form-control-lg bg-light border-0 rounded-3" value="<?= old('passport_expiry_date', $participant['passport_expiry_date'] ?? '') ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">No. Reg</label>
+                            <input type="text" name="passport_reg_number" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="Nomor registrasi" value="<?= old('passport_reg_number', $participant['passport_reg_number'] ?? '') ?>">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Kantor yang Mengeluarkan</label>
+                            <input type="text" name="passport_issuing_office" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="cth: Kantor Imigrasi Kelas I Jakarta Pusat" value="<?= old('passport_issuing_office', $participant['passport_issuing_office'] ?? '') ?>">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Kota / Tempat Pengeluaran</label>
+                            <input type="text" name="passport_issuance_city" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="Kota pengeluaran paspor" value="<?= old('passport_issuance_city', $participant['passport_issuance_city'] ?? '') ?>">
                         </div>
                     </div>
                 </div>
@@ -157,15 +205,15 @@
                     <div class="row g-4">
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Nama Kontak</label>
-                            <input type="text" name="emergency_name" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="Nama Keluarga" value="<?= old('emergency_name', $participant['emergency_name']) ?>">
+                            <input type="text" name="emergency_name" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="Nama Keluarga" required value="<?= old('emergency_name', $participant['emergency_name']) ?>">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Hubungan</label>
-                            <input type="text" name="emergency_relationship" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="Istri/Suami/Anak/Orang Tua" value="<?= old('emergency_relationship', $participant['emergency_relationship']) ?>">
+                            <input type="text" name="emergency_relationship" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="Istri/Suami/Anak/Orang Tua" required value="<?= old('emergency_relationship', $participant['emergency_relationship']) ?>">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Nomor Telepon</label>
-                            <input type="text" name="emergency_phone" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="08..." value="<?= old('emergency_phone', $participant['emergency_phone']) ?>">
+                            <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Nomor HP Darurat</label>
+                            <input type="text" name="emergency_phone" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="08..." required minlength="8" value="<?= old('emergency_phone', $participant['emergency_phone']) ?>">
                         </div>
                     </div>
                 </div>
@@ -229,4 +277,17 @@
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var yes = document.getElementById('hasPassportYes');
+    var no = document.getElementById('hasPassportNo');
+    var block = document.getElementById('passportFields');
+    function toggle() {
+        block.style.display = yes.checked ? 'flex' : 'none';
+    }
+    yes.addEventListener('change', toggle);
+    no.addEventListener('change', toggle);
+});
+</script>
 <?= $this->endSection() ?>

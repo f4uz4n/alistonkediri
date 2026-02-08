@@ -1,6 +1,7 @@
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('content') ?>
+<?php helper('package'); ?>
 <div class="row align-items-center mb-5">
     <div class="col-12 col-md-6">
         <h2 class="fw-800 text-dark mb-1">Paket Perjalanan</h2>
@@ -49,7 +50,7 @@
                             <img src="<?= get_company_logo() ?>" alt="Logo" style="width: 35px;">
                         </div>
                         <div class="bg-white rounded-4 shadow-sm px-4 py-2 border d-flex flex-column align-items-center justify-content-center">
-                            <h3 class="fw-800 text-primary mb-0"><?= esc($package['price']) ?><small class="fs-6 ms-1"><?= esc($package['price_unit']) ?></small></h3>
+                            <h3 class="fw-800 text-primary mb-0"><?= format_price_display($package['price']) ?></h3>
                         </div>
                     </div>
                 </div>
@@ -72,19 +73,23 @@
                     <div class="row g-3 mb-4">
                         <div class="col-6">
                             <div class="bg-light rounded-4 p-3 border">
-                                <small class="text-secondary d-block mb-1 fw-bold text-uppercase" style="font-size: 0.6rem;">Hotel Mekkah</small>
-                                <span class="d-block fw-bold text-dark small text-truncate"><?= esc($package['hotel_mekkah']) ?></span>
+                                <small class="text-secondary d-block mb-1 fw-bold text-uppercase" style="font-size: 0.6rem;">Hotel <?= esc($city1_name ?? 'Kota 1') ?></small>
+                                <?php $h1 = $package['display_hotel_1'] ?? null; ?>
+                                <span class="d-block fw-bold text-dark small text-truncate"><?= $h1 ? esc($h1['name']) : esc($package['hotel_mekkah'] ?? '—') ?></span>
+                                <?php if ($h1 && $h1['city']): ?><small class="text-muted d-block"><?= esc($h1['city']) ?></small><?php endif; ?>
                                 <div class="text-warning" style="font-size: 0.7rem;">
-                                    <?= str_repeat('★', (int)$package['hotel_mekkah_stars']) ?>
+                                    <?= $h1 ? str_repeat('★', $h1['stars']) : str_repeat('★', (int)($package['hotel_mekkah_stars'] ?? 0)) ?>
                                 </div>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="bg-light rounded-4 p-3 border">
-                                <small class="text-secondary d-block mb-1 fw-bold text-uppercase" style="font-size: 0.6rem;">Hotel Madinah</small>
-                                <span class="d-block fw-bold text-dark small text-truncate"><?= esc($package['hotel_madinah']) ?></span>
+                                <small class="text-secondary d-block mb-1 fw-bold text-uppercase" style="font-size: 0.6rem;">Hotel <?= esc($city2_name ?? 'Kota 2') ?></small>
+                                <?php $h2 = $package['display_hotel_2'] ?? null; ?>
+                                <span class="d-block fw-bold text-dark small text-truncate"><?= $h2 ? esc($h2['name']) : esc($package['hotel_madinah'] ?? '—') ?></span>
+                                <?php if ($h2 && $h2['city']): ?><small class="text-muted d-block"><?= esc($h2['city']) ?></small><?php endif; ?>
                                 <div class="text-warning" style="font-size: 0.7rem;">
-                                    <?= str_repeat('★', (int)$package['hotel_madinah_stars']) ?>
+                                    <?= $h2 ? str_repeat('★', $h2['stars']) : str_repeat('★', (int)($package['hotel_madinah_stars'] ?? 0)) ?>
                                 </div>
                             </div>
                         </div>
@@ -128,11 +133,13 @@
                         <a href="<?= base_url('package/edit/'.$package['id']) ?>" class="btn btn-light rounded-pill px-4 fw-bold border">
                             <i class="bi bi-pencil-square me-2"></i>Edit
                         </a>
-                        <a href="<?= base_url('package/delete/'.$package['id']) ?>" 
-                           class="btn btn-light text-danger rounded-pill flex-grow-1 border py-2 fw-bold"
-                           onclick="return confirm('Hapus paket perjalanan ini?')">
+                        <button type="button" class="btn btn-light text-danger rounded-pill flex-grow-1 border py-2 fw-bold btn-delete-package"
+                           data-bs-toggle="modal" data-bs-target="#modalHapusPaket"
+                           data-package-id="<?= (int)$package['id'] ?>"
+                           data-package-name="<?= esc($package['name']) ?>"
+                           data-delete-url="<?= base_url('package/delete/'.$package['id']) ?>">
                             <i class="bi bi-trash me-1"></i>Hapus Paket
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -140,4 +147,48 @@
         <?php endforeach; ?>
     <?php endif; ?>
 </div>
+
+<!-- Modal Konfirmasi Hapus Paket -->
+<div class="modal fade" id="modalHapusPaket" tabindex="-1" aria-labelledby="modalHapusPaketLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-body text-center p-5">
+                <div class="rounded-circle bg-danger bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+                    <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 1.75rem;"></i>
+                </div>
+                <h5 class="fw-800 text-dark mb-2" id="modalHapusPaketLabel">Hapus Paket?</h5>
+                <p class="text-secondary small mb-3" id="modalHapusPaketNama"></p>
+                <p class="text-muted small mb-4">
+                    Jika paket dihapus, <strong>semua data terkait</strong> (pendaftaran jamaah, pembayaran, dokumen, dll.) akan terpengaruh. Tindakan ini <strong>tidak dapat dibatalkan</strong>.
+                </p>
+                <div class="d-flex gap-2 justify-content-center flex-wrap">
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-bold border" data-bs-dismiss="modal">Batal</button>
+                    <a href="#" id="btnConfirmHapusPaket" class="btn btn-danger rounded-pill px-4 fw-bold">
+                        <i class="bi bi-trash me-1"></i>Ya, Hapus Paket
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var modal = document.getElementById('modalHapusPaket');
+    if (!modal) return;
+    var bsModal = new bootstrap.Modal(modal);
+    var btnConfirm = document.getElementById('btnConfirmHapusPaket');
+    var labelNama = document.getElementById('modalHapusPaketNama');
+
+    modal.addEventListener('show.bs.modal', function(e) {
+        var btn = e.relatedTarget;
+        if (btn && btn.classList.contains('btn-delete-package')) {
+            var nama = btn.getAttribute('data-package-name') || 'Paket ini';
+            var url = btn.getAttribute('data-delete-url') || '#';
+            labelNama.textContent = nama;
+            btnConfirm.setAttribute('href', url);
+        }
+    });
+})();
+</script>
 <?= $this->endSection() ?>

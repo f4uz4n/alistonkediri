@@ -12,23 +12,15 @@ class Agency extends BaseController
     {
         $materialModel = new MaterialModel();
         $participantModel = new \App\Models\ParticipantModel();
-        $db = \Config\Database::connect();
         $agencyId = session()->get('id');
 
         // Stats
         $totalJamaah = $participantModel->where('agency_id', $agencyId)->countAllResults();
         $verifiedJamaah = $participantModel->where('agency_id', $agencyId)->where('status', 'verified')->countAllResults();
-        
-        // Calculate Income (Sum of package price for verified participants)
-        $incomeQuery = $db->table('participants')
-            ->selectSum('travel_packages.price', 'total_income')
-            ->join('travel_packages', 'travel_packages.id = participants.package_id')
-            ->where('participants.agency_id', $agencyId)
-            ->where('participants.status', 'verified')
-            ->get()
-            ->getRow();
-            
-        $totalIncome = $incomeQuery ? $incomeQuery->total_income : 0;
+
+        // Total penghasilan = komisi yang sudah diverifikasi (dibayar) oleh admin
+        $commissionModel = new \App\Models\AgencyCommissionModel();
+        $totalIncome = $commissionModel->getTotalPaidCommissionForAgency($agencyId);
 
         // Recent Verified Jamaah
         $recentParticipants = $participantModel->select('participants.*, travel_packages.name as package_name')
@@ -40,7 +32,6 @@ class Agency extends BaseController
             ->findAll();
 
         $data = [
-            'materials' => $materialModel->orderBy('created_at', 'DESC')->findAll(),
             'stats' => [
                 'total_jamaah' => $totalJamaah,
                 'verified_jamaah' => $verifiedJamaah,
@@ -51,31 +42,139 @@ class Agency extends BaseController
         return view('agency/dashboard', $data);
     }
 
+    public function materials()
+    {
+        $materialModel = new MaterialModel();
+        $data = [
+            'materials' => $materialModel->orderBy('created_at', 'DESC')->findAll()
+        ];
+        return view('agency/materials', $data);
+    }
+
     public function income()
     {
-        $participantModel = new \App\Models\ParticipantModel();
-        $db = \Config\Database::connect();
         $agencyId = session()->get('id');
+        $commissionModel = new \App\Models\AgencyCommissionModel();
+        $packageModel = new \App\Models\PackageModel();
 
-        // Verified Participants with Price
-        $verifiedParticipants = $participantModel->select('participants.*, travel_packages.name as package_name, travel_packages.price')
-            ->join('travel_packages', 'travel_packages.id = participants.package_id')
-            ->where('participants.agency_id', $agencyId)
-            ->where('participants.status', 'verified')
-            ->orderBy('participants.updated_at', 'DESC')
-            ->findAll();
+        $filters = [
+            'start_date' => $this->request->getGet('start_date'),
+            'end_date'   => $this->request->getGet('end_date'),
+            'package_id' => $this->request->getGet('package_id'),
+        ];
 
-        $totalIncome = 0;
-        foreach ($verifiedParticipants as $p) {
-            $totalIncome += $p['price'];
-        }
+        $commissions = $commissionModel->getPaidCommissionsForAgency($agencyId, $filters);
+        $total_income = $commissionModel->getTotalPaidCommissionForAgency($agencyId, $filters);
+
+        $packages = $packageModel->select('id, name')->orderBy('name')->findAll();
 
         $data = [
-            'participants' => $verifiedParticipants,
-            'total_income' => $totalIncome
+            'commissions'  => $commissions,
+            'total_income' => $total_income,
+            'packages'     => $packages,
+            'filters'      => $filters,
         ];
 
         return view('agency/income', $data);
+    }
+
+    /**
+     * Halaman ubah profil agency: nama lengkap, foto, telepon, alamat, password.
+     */
+    public function profile()
+    {
+        $userModel = new \App\Models\UserModel();
+        $user = $userModel->find(session()->get('id'));
+        if (!$user) {
+            return redirect()->to('agency')->with('error', 'Sesi tidak valid.');
+        }
+        return view('agency/profile', ['user' => $user]);
+    }
+
+    /**
+     * Proses update profil agency.
+     */
+    public function updateProfile()
+    {
+        $userModel = new \App\Models\UserModel();
+        $id = session()->get('id');
+
+        $rules = [
+            'full_name' => 'required|min_length[2]',
+            'phone'     => 'required|min_length[8]',
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('error', 'Nama lengkap dan nomor telepon wajib diisi dengan benar.');
+        }
+
+        $data = [
+            'full_name' => $this->request->getPost('full_name'),
+            'email'     => $this->request->getPost('email'),
+            'phone'     => $this->request->getPost('phone'),
+            'address'   => $this->request->getPost('address'),
+        ];
+
+        $password = $this->request->getPost('password');
+        if (!empty($password)) {
+            if (strlen($password) < 6) {
+                return redirect()->back()->withInput()->with('error', 'Password minimal 6 karakter.');
+            }
+            $data['password'] = password_hash($password, PASSWORD_DEFAULT);
+        }
+
+        $img = $this->request->getFile('profile_pic');
+        if ($img && $img->isValid() && !$img->hasMoved()) {
+            $newName = $img->getRandomName();
+            $img->move('uploads/profiles', $newName);
+            $data['profile_pic'] = 'uploads/profiles/' . $newName;
+        }
+
+        if ($userModel->update($id, $data)) {
+            return redirect()->to('agency/profile')->with('msg', 'Profil berhasil diperbarui.');
+        }
+        return redirect()->back()->withInput()->with('error', 'Gagal memperbarui profil.');
+    }
+
+    /**
+     * Menu input testimoni jamaah (form + daftar kiriman agency).
+     */
+    public function testimoni()
+    {
+        $packageModel = new \App\Models\PackageModel();
+        $testimonialModel = new \App\Models\TestimonialModel();
+        $data = [
+            'packages' => $packageModel->select('id, name')->orderBy('name')->findAll(),
+            'testimonials' => $testimonialModel->getListForAgency(session()->get('id')),
+        ];
+        return view('agency/testimoni', $data);
+    }
+
+    /**
+     * Submit testimoni dari dashboard agency (tanpa captcha).
+     */
+    public function submitTestimoni()
+    {
+        $rules = [
+            'name' => 'required|min_length[2]|max_length[255]',
+            'package_id' => 'permit_empty|integer',
+            'testimonial' => 'required|min_length[10]',
+            'rating' => 'required|in_list[1,2,3,4,5]',
+        ];
+        if (!$this->validate($rules)) {
+            return redirect()->to('agency/testimoni')->withInput()->with('error', 'Lengkapi nama, rating, dan testimoni dengan benar.');
+        }
+        $testimonialModel = new \App\Models\TestimonialModel();
+        $testimonialModel->insert([
+            'name' => $this->request->getPost('name'),
+            'package_id' => $this->request->getPost('package_id') ?: null,
+            'testimonial' => $this->request->getPost('testimonial'),
+            'rating' => (int) $this->request->getPost('rating'),
+            'status' => 'pending',
+            'source' => 'agency',
+            'agency_id' => session()->get('id'),
+        ]);
+        return redirect()->to('agency/testimoni')->with('msg', 'Testimoni berhasil dikirim. Akan dipublikasikan setelah diverifikasi admin.');
     }
 
     public function team()
@@ -115,11 +214,83 @@ class Agency extends BaseController
         return redirect()->to('agency/team')->with('msg', 'Anggota berhasil ditambahkan');
     }
 
+    /** Label Hotel [Kota] dari master hotel (city di travel_hotels), urut ikut master kota. */
+    private function getPackageCityLabelsForAgency()
+    {
+        $cityModel = new \App\Models\CityModel();
+        $hotelModel = new \App\Models\HotelModel();
+        $kotaOrdered = $cityModel->getOrdered();
+        $hotels = $hotelModel->select('city')->distinct()->findAll();
+        $citySet = array_column($hotels, 'city');
+        $out = [];
+        foreach ($kotaOrdered as $k) {
+            $name = $k['name'];
+            if (in_array($name, $citySet, true)) {
+                $out[] = $name;
+                if (count($out) >= 2) {
+                    break;
+                }
+            }
+        }
+        $c1 = $out[0] ?? ($kotaOrdered[0]['name'] ?? 'Kota 1');
+        $c2 = $out[1] ?? ($kotaOrdered[1]['name'] ?? 'Kota 2');
+        return ['city1_name' => $c1, 'city2_name' => $c2];
+    }
+
+    /** Isi package dengan data tampilan hotel dari master (relasi display). */
+    private function enrichPackageWithHotelMaster(array &$package)
+    {
+        $hotelModel = new \App\Models\HotelModel();
+        $package['display_hotel_1'] = null;
+        $package['display_hotel_2'] = null;
+        if (!empty($package['hotel_mekkah_id'])) {
+            $h = $hotelModel->find((int) $package['hotel_mekkah_id']);
+            if ($h) {
+                $package['display_hotel_1'] = [
+                    'name' => $h['name'],
+                    'city' => $h['city'] ?? '',
+                    'stars' => (int) ($h['star_rating'] ?? 0),
+                ];
+            }
+        }
+        if ($package['display_hotel_1'] === null && !empty($package['hotel_mekkah'])) {
+            $package['display_hotel_1'] = [
+                'name' => $package['hotel_mekkah'],
+                'city' => '',
+                'stars' => (int) ($package['hotel_mekkah_stars'] ?? 0),
+            ];
+        }
+        if (!empty($package['hotel_madinah_id'])) {
+            $h = $hotelModel->find((int) $package['hotel_madinah_id']);
+            if ($h) {
+                $package['display_hotel_2'] = [
+                    'name' => $h['name'],
+                    'city' => $h['city'] ?? '',
+                    'stars' => (int) ($h['star_rating'] ?? 0),
+                ];
+            }
+        }
+        if ($package['display_hotel_2'] === null && !empty($package['hotel_madinah'])) {
+            $package['display_hotel_2'] = [
+                'name' => $package['hotel_madinah'],
+                'city' => '',
+                'stars' => (int) ($package['hotel_madinah_stars'] ?? 0),
+            ];
+        }
+    }
+
     public function packages()
     {
         $packageModel = new \App\Models\PackageModel();
+        $labels = $this->getPackageCityLabelsForAgency();
+        $packages = $packageModel->findAll();
+        foreach ($packages as &$p) {
+            $this->enrichPackageWithHotelMaster($p);
+        }
         $data = [
-            'packages' => $packageModel->findAll()
+            'packages' => $packages,
+            'city1_name' => $labels['city1_name'],
+            'city2_name' => $labels['city2_name'],
         ];
         return view('agency/packages', $data);
     }
@@ -133,8 +304,12 @@ class Agency extends BaseController
             return redirect()->to('agency/packages')->with('error', 'Paket tidak ditemukan');
         }
 
+        $this->enrichPackageWithHotelMaster($package);
+        $labels = $this->getPackageCityLabelsForAgency();
         $data = [
-            'package' => $package
+            'package' => $package,
+            'city1_name' => $labels['city1_name'],
+            'city2_name' => $labels['city2_name'],
         ];
         return view('agency/package_detail', $data);
     }
@@ -164,14 +339,25 @@ class Agency extends BaseController
             'date_of_birth' => 'required|valid_date',
             'gender' => 'required',
             'phone' => 'required|min_length[8]',
+            'emergency_name' => 'required|min_length[2]',
+            'emergency_relationship' => 'required|min_length[2]',
+            'emergency_phone' => 'required|min_length[8]',
             'address' => 'required',
             'kecamatan' => 'required',
             'kabupaten' => 'required',
             'provinsi' => 'required',
         ];
 
+        $hasPassport = (int) $this->request->getPost('has_passport') === 1;
+        if ($hasPassport) {
+            $rules['passport_number'] = 'required|min_length[5]';
+            $rules['passport_full_name'] = 'required|min_length[3]';
+            $rules['passport_issuance_date'] = 'required|valid_date';
+            $rules['passport_expiry_date'] = 'required|valid_date';
+        }
+
         if (!$this->validate($rules)) {
-            return redirect()->back()->withInput()->with('error', 'Mohon lengkapi seluruh biodata wajib sesuai KTP.');
+            return redirect()->back()->withInput()->with('error', 'Mohon lengkapi seluruh biodata wajib sesuai KTP.' . ($hasPassport ? ' Dan data paspor wajib diisi.' : ''));
         }
 
         $db = \Config\Database::connect();
@@ -196,10 +382,27 @@ class Agency extends BaseController
             'marital_status' => $this->request->getPost('marital_status'),
             'occupation' => $this->request->getPost('occupation'),
             'blood_type' => $this->request->getPost('blood_type'),
-            'nationality' => $this->request->getPost('nationality') ?? 'WNI',
+            'nationality' => $hasPassport ? ($this->request->getPost('passport_nationality') ?: 'Indonesian') : ($this->request->getPost('nationality') ?? 'WNI'),
             'phone' => $this->request->getPost('phone'),
-            'status' => 'pending'
+            'emergency_name' => $this->request->getPost('emergency_name'),
+            'emergency_relationship' => $this->request->getPost('emergency_relationship'),
+            'emergency_phone' => $this->request->getPost('emergency_phone'),
+            'status' => 'pending',
+            'has_passport' => $hasPassport ? 1 : 0,
         ];
+
+        if ($hasPassport) {
+            $participantData['passport_number'] = $this->request->getPost('passport_number');
+            $participantData['passport_type'] = $this->request->getPost('passport_type');
+            $participantData['passport_full_name'] = $this->request->getPost('passport_full_name');
+            $participantData['passport_place_of_birth'] = $this->request->getPost('passport_place_of_birth');
+            $participantData['passport_issuance_date'] = $this->request->getPost('passport_issuance_date');
+            $participantData['passport_expiry_date'] = $this->request->getPost('passport_expiry_date');
+            $participantData['passport_issuance_city'] = $this->request->getPost('passport_issuance_city');
+            $participantData['passport_reg_number'] = $this->request->getPost('passport_reg_number');
+            $participantData['passport_issuing_office'] = $this->request->getPost('passport_issuing_office');
+            $participantData['passport_name_idn'] = $this->request->getPost('passport_name_idn');
+        }
 
         $participantId = $participantModel->insert($participantData);
 
@@ -317,6 +520,80 @@ class Agency extends BaseController
         return view('agency/payment_detail', $data);
     }
 
+    /**
+     * Cetak kwitansi pembayaran lunas (sama seperti admin) — semua pembayaran terverifikasi.
+     */
+    public function receipt($participant_id)
+    {
+        $participantModel = new \App\Models\ParticipantModel();
+        $participant = $participantModel->getParticipantBuilder()
+            ->where('participants.id', $participant_id)
+            ->get()->getRowArray();
+        if (!$participant || $participant['agency_id'] != session()->get('id')) {
+            return redirect()->to('agency/payments')->with('error', 'Jamaah tidak ditemukan.');
+        }
+
+        $paymentModel = new \App\Models\PaymentModel();
+        $payments = $paymentModel->where('participant_id', $participant_id)
+            ->where('status', 'verified')
+            ->orderBy('payment_date', 'ASC')
+            ->findAll();
+
+        $data = [
+            'participant' => $participant,
+            'payments' => $payments,
+            'title' => 'Kwitansi Pendaftaran - ' . $participant['name'],
+        ];
+        return view('owner/participant/receipt_print', $data);
+    }
+
+    /**
+     * Cetak kwitansi pembayaran (sama seperti admin) — hanya untuk pembayaran yang sudah diverifikasi.
+     */
+    public function transactionReceipt($payment_id)
+    {
+        $paymentModel = new \App\Models\PaymentModel();
+        $payment = $paymentModel->find($payment_id);
+        if (!$payment) {
+            return redirect()->to('agency/payments')->with('error', 'Pembayaran tidak ditemukan.');
+        }
+        if ($payment['status'] !== 'verified') {
+            return redirect()->back()->with('error', 'Kwitansi hanya dapat dicetak setelah pembayaran diverifikasi oleh admin.');
+        }
+
+        $participantModel = new \App\Models\ParticipantModel();
+        $participant = $participantModel->getParticipantBuilder()
+            ->where('participants.id', $payment['participant_id'])
+            ->get()->getRowArray();
+        if (!$participant || $participant['agency_id'] != session()->get('id')) {
+            return redirect()->to('agency/payments')->with('error', 'Jamaah tidak ditemukan.');
+        }
+
+        $userModel = new \App\Models\UserModel();
+        $owner = $userModel->where('role', 'owner')->first();
+        $namaDirektur = $owner['full_name'] ?? '—';
+        $namaPt = $owner['company_name'] ?? '';
+        $alamatPt = $owner['address'] ?? '';
+        $companyLogo = !empty($owner['company_logo']) ? base_url($owner['company_logo']) : base_url('assets/img/logo_.png');
+
+        $tanggalSignature = !empty($payment['updated_at']) ? date('d/m/Y H:i', strtotime($payment['updated_at'])) : date('d/m/Y H:i', strtotime($payment['payment_date']));
+        $qrData = 'PAY#' . $payment['id'] . '#' . $payment['amount'] . '#' . ($payment['updated_at'] ?? $payment['payment_date']);
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' . rawurlencode($qrData);
+
+        $data = [
+            'participant' => $participant,
+            'payment' => $payment,
+            'nama_direktur' => $namaDirektur,
+            'nama_pt' => $namaPt,
+            'alamat_pt' => $alamatPt,
+            'company_logo_url' => $companyLogo,
+            'tanggal_signature' => $tanggalSignature,
+            'qr_url' => $qrUrl,
+            'title' => 'Kwitansi Pembayaran - ' . $participant['name'],
+        ];
+        return view('owner/participant/payment_receipt_print', $data);
+    }
+
     public function storePayment()
     {
         $rules = [
@@ -392,14 +669,71 @@ class Agency extends BaseController
             'nik' => 'required|min_length[16]|max_length[20]',
             'name' => 'required|min_length[3]',
             'phone' => 'required|min_length[8]',
+            'emergency_name' => 'required|min_length[2]',
+            'emergency_relationship' => 'required|min_length[2]',
+            'emergency_phone' => 'required|min_length[8]',
         ];
 
-        if (!$this->validate($rules)) {
-            return redirect()->back()->withInput()->with('error', 'Mohon lengkapi data wajib dengan benar.');
+        $hasPassport = (int) $this->request->getPost('has_passport') === 1;
+        if ($hasPassport) {
+            $rules['passport_number'] = 'required|min_length[5]';
+            $rules['passport_full_name'] = 'required|min_length[3]';
+            $rules['passport_issuance_date'] = 'required|valid_date';
+            $rules['passport_expiry_date'] = 'required|valid_date';
         }
 
-        $participantData = $this->request->getPost();
-        unset($participantData['id']); // Safety
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('error', 'Mohon lengkapi data wajib dengan benar.' . ($hasPassport ? ' Data paspor wajib diisi.' : ''));
+        }
+
+        $participantData = [
+            'nik' => $this->request->getPost('nik'),
+            'name' => $this->request->getPost('name'),
+            'place_of_birth' => $this->request->getPost('place_of_birth'),
+            'date_of_birth' => $this->request->getPost('date_of_birth'),
+            'gender' => $this->request->getPost('gender'),
+            'address' => $this->request->getPost('address'),
+            'rt_rw' => $this->request->getPost('rt_rw'),
+            'kelurahan' => $this->request->getPost('kelurahan'),
+            'kecamatan' => $this->request->getPost('kecamatan'),
+            'kabupaten' => $this->request->getPost('kabupaten'),
+            'provinsi' => $this->request->getPost('provinsi'),
+            'religion' => $this->request->getPost('religion'),
+            'marital_status' => $this->request->getPost('marital_status'),
+            'occupation' => $this->request->getPost('occupation'),
+            'blood_type' => $this->request->getPost('blood_type'),
+            'phone' => $this->request->getPost('phone'),
+            'emergency_name' => $this->request->getPost('emergency_name'),
+            'emergency_relationship' => $this->request->getPost('emergency_relationship'),
+            'emergency_phone' => $this->request->getPost('emergency_phone'),
+            'has_passport' => $hasPassport ? 1 : 0,
+        ];
+
+        if ($hasPassport) {
+            $participantData['nationality'] = $this->request->getPost('passport_nationality') ?: 'Indonesian';
+            $participantData['passport_number'] = $this->request->getPost('passport_number');
+            $participantData['passport_type'] = $this->request->getPost('passport_type');
+            $participantData['passport_full_name'] = $this->request->getPost('passport_full_name');
+            $participantData['passport_place_of_birth'] = $this->request->getPost('passport_place_of_birth');
+            $participantData['passport_issuance_date'] = $this->request->getPost('passport_issuance_date');
+            $participantData['passport_expiry_date'] = $this->request->getPost('passport_expiry_date');
+            $participantData['passport_issuance_city'] = $this->request->getPost('passport_issuance_city');
+            $participantData['passport_reg_number'] = $this->request->getPost('passport_reg_number');
+            $participantData['passport_issuing_office'] = $this->request->getPost('passport_issuing_office');
+            $participantData['passport_name_idn'] = $this->request->getPost('passport_name_idn');
+        } else {
+            $participantData['nationality'] = $this->request->getPost('nationality') ?? 'WNI';
+            $participantData['passport_number'] = null;
+            $participantData['passport_type'] = null;
+            $participantData['passport_full_name'] = null;
+            $participantData['passport_place_of_birth'] = null;
+            $participantData['passport_issuance_date'] = null;
+            $participantData['passport_expiry_date'] = null;
+            $participantData['passport_issuance_city'] = null;
+            $participantData['passport_reg_number'] = null;
+            $participantData['passport_issuing_office'] = null;
+            $participantData['passport_name_idn'] = null;
+        }
 
         $db = \Config\Database::connect();
         $db->transStart();
@@ -455,6 +789,212 @@ class Agency extends BaseController
         }
 
         return redirect()->to('agency/participants')->with('msg', 'Data jamaah ' . $participant['name'] . ' berhasil diperbarui.');
+    }
+
+    /**
+     * Cetak formulir pendaftaran jamaah (sama seperti di owner).
+     */
+    public function registrationFormPrint($id)
+    {
+        $participantModel = new \App\Models\ParticipantModel();
+        $participant = $participantModel
+            ->select('participants.*, travel_packages.name as package_name, travel_packages.price as package_price, travel_packages.departure_date as package_departure_date, travel_packages.freebies as package_freebies, travel_packages.inclusions as package_inclusions, travel_packages.hotel_mekkah_id, travel_packages.hotel_madinah_id, users.full_name as agency_name, travel_hotels.name as hotel_upgrade_name, travel_hotel_rooms.name as room_upgrade_name, travel_hotel_rooms.type as room_upgrade_type')
+            ->join('travel_packages', 'travel_packages.id = participants.package_id')
+            ->join('users', 'users.id = participants.agency_id')
+            ->join('travel_hotels', 'travel_hotels.id = participants.hotel_upgrade_id', 'left')
+            ->join('travel_hotel_rooms', 'travel_hotel_rooms.id = participants.room_upgrade_id', 'left')
+            ->where('participants.id', $id)
+            ->where('participants.agency_id', session()->get('id'))
+            ->first();
+
+        if (!$participant) {
+            return redirect()->to('agency/participants')->with('error', 'Jamaah tidak ditemukan.');
+        }
+
+        $userModel = new \App\Models\UserModel();
+        $owner = $userModel->where('role', 'owner')->first();
+        $companyLogo = !empty($owner['company_logo']) ? base_url($owner['company_logo']) : base_url('assets/img/logo_.png');
+        $companyName = $owner['company_name'] ?? 'Nama Perusahaan';
+        $companyAddress = $owner['address'] ?? '';
+        $namaDirektur = $owner['full_name'] ?? '—';
+
+        $hotelModel = new \App\Models\HotelModel();
+        $hotelsPackage = [];
+        if (!empty($participant['hotel_mekkah_id'])) {
+            $h = $hotelModel->find($participant['hotel_mekkah_id']);
+            if ($h) $hotelsPackage['Mekkah'] = $h['name'] . ($h['city'] ? ' (' . $h['city'] . ')' : '');
+        }
+        if (!empty($participant['hotel_madinah_id'])) {
+            $h = $hotelModel->find($participant['hotel_madinah_id']);
+            if ($h) $hotelsPackage['Madinah'] = $h['name'] . ($h['city'] ? ' (' . $h['city'] . ')' : '');
+        }
+        if (!empty($participant['hotel_upgrade_name'])) {
+            $hotelsPackage['Upgrade'] = $participant['hotel_upgrade_name'] . (!empty($participant['room_upgrade_name']) ? ' — ' . $participant['room_upgrade_name'] : '');
+        }
+
+        $equipmentModel = new \App\Models\EquipmentModel();
+        $collectedEquipment = $equipmentModel->getByParticipant($id);
+        $collectedMap = [];
+        foreach ($collectedEquipment as $eq) {
+            $collectedMap[$eq['item_name']] = $eq;
+        }
+
+        $masterEquipmentModel = new \App\Models\MasterEquipmentModel();
+        $masterAttributes = $masterEquipmentModel->getActive();
+
+        $paymentModel = new \App\Models\PaymentModel();
+        $payments = $paymentModel->where('participant_id', $id)->where('status', 'verified')->orderBy('payment_date', 'ASC')->findAll();
+        $totalPaidRow = $paymentModel->getTotalPaid($id);
+        $totalPaid = (float)($totalPaidRow['amount'] ?? 0);
+        $totalTarget = (float)($participant['package_price'] ?? 0) + (float)($participant['upgrade_cost'] ?? 0);
+
+        $freebies = json_decode($participant['package_freebies'] ?? '[]', true) ?? [];
+        $inclusions = json_decode($participant['package_inclusions'] ?? '[]', true) ?? [];
+
+        $tanggalSignature = date('d/m/Y H:i');
+        $qrData = 'REG#' . $id . '#' . $participant['nik'] . '#' . $tanggalSignature;
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . rawurlencode($qrData);
+
+        $data = [
+            'participant' => $participant,
+            'payments' => $payments,
+            'total_paid' => $totalPaid,
+            'total_target' => $totalTarget,
+            'freebies' => $freebies,
+            'inclusions' => $inclusions,
+            'hotels_package' => $hotelsPackage,
+            'master_attributes' => $masterAttributes,
+            'collected_map' => $collectedMap,
+            'company_logo_url' => $companyLogo,
+            'company_name' => $companyName,
+            'company_address' => $companyAddress,
+            'nama_direktur' => $namaDirektur,
+            'tanggal_signature' => $tanggalSignature,
+            'qr_url' => $qrUrl,
+            'title' => 'Formulir Pendaftaran - ' . $participant['name'],
+        ];
+        return view('owner/participant/registration_form_print', $data);
+    }
+
+    /**
+     * Halaman melengkapi berkas jamaah (paspor, KTP, vaksin).
+     */
+    public function documents($id)
+    {
+        $participantModel = new \App\Models\ParticipantModel();
+        $participant = $participantModel->find($id);
+        if (!$participant || $participant['agency_id'] != session()->get('id')) {
+            return redirect()->to('agency/participants')->with('error', 'Jamaah tidak ditemukan.');
+        }
+
+        $docModel = new \App\Models\DocumentModel();
+        $documents = $docModel->where('participant_id', $id)->orderBy('created_at', 'DESC')->findAll();
+
+        $package = (new \App\Models\PackageModel())->find($participant['package_id']);
+        $data = [
+            'participant' => $participant,
+            'package' => $package,
+            'documents' => $documents,
+        ];
+        return view('agency/documents', $data);
+    }
+
+    /**
+     * Upload multiple berkas (sama seperti admin).
+     */
+    public function uploadDocument()
+    {
+        $participantId = (int) $this->request->getPost('participant_id');
+        $participantModel = new \App\Models\ParticipantModel();
+        $participant = $participantModel->find($participantId);
+        if (!$participant || $participant['agency_id'] != session()->get('id')) {
+            return redirect()->to('agency/participants')->with('error', 'Jamaah tidak ditemukan.');
+        }
+
+        $files = $this->request->getFileMultiple('files');
+        $types = $this->request->getPost('types');
+        $titles = $this->request->getPost('titles');
+
+        if (!$files || !is_array($files)) {
+            return redirect()->to('agency/documents/' . $participantId)->with('error', 'Tidak ada file dipilih.');
+        }
+
+        $docModel = new \App\Models\DocumentModel();
+        $uploadedCount = 0;
+
+        $allowedTypes = ['passport', 'id_card', 'vaccine', 'other'];
+        foreach ($files as $index => $file) {
+            if ($file->isValid() && !$file->hasMoved()) {
+                $type = $types[$index] ?? 'other';
+                if (!in_array($type, $allowedTypes)) {
+                    $type = 'other';
+                }
+                $title = is_array($titles) ? ($titles[$index] ?? '') : '';
+                $newName = $file->getRandomName();
+                $file->move(ROOTPATH . 'public/uploads/documents', $newName);
+
+                if ($type !== 'other') {
+                    $docModel->where('participant_id', $participantId)->where('type', $type)->delete();
+                }
+
+                $docModel->save([
+                    'participant_id' => $participantId,
+                    'type' => $type,
+                    'title' => $title,
+                    'file_path' => 'uploads/documents/' . $newName,
+                    'is_verified' => 0,
+                ]);
+                $uploadedCount++;
+            }
+        }
+
+        if ($uploadedCount > 0) {
+            return redirect()->to('agency/documents/' . $participantId)->with('msg', $uploadedCount . ' berkas berhasil diupload.');
+        }
+        return redirect()->to('agency/documents/' . $participantId)->with('error', 'Gagal mengupload berkas.');
+    }
+
+    /**
+     * Simpan/update berkas (paspor, KTP, vaksin) dari form melengkapi berkas.
+     */
+    public function updateDocuments()
+    {
+        $participantId = (int) $this->request->getPost('participant_id');
+        $participantModel = new \App\Models\ParticipantModel();
+        $participant = $participantModel->find($participantId);
+        if (!$participant || $participant['agency_id'] != session()->get('id')) {
+            return redirect()->to('agency/participants')->with('error', 'Jamaah tidak ditemukan.');
+        }
+
+        $db = \Config\Database::connect();
+        $docTypes = ['passport', 'id_card', 'vaccine'];
+        foreach ($docTypes as $type) {
+            $file = $this->request->getFile($type);
+            if ($file && $file->isValid() && !$file->hasMoved()) {
+                $newName = $file->getRandomName();
+                $file->move(ROOTPATH . 'public/uploads/documents', $newName);
+                $path = 'uploads/documents/' . $newName;
+
+                $existing = $db->table('participant_documents')->where('participant_id', $participantId)->where('type', $type)->get()->getRow();
+                if ($existing) {
+                    $oldPath = $existing->file_path;
+                    if (!empty($oldPath) && is_file(ROOTPATH . 'public/' . $oldPath)) {
+                        @unlink(ROOTPATH . 'public/' . $oldPath);
+                    }
+                    $db->table('participant_documents')->where('id', $existing->id)->update(['file_path' => $path, 'updated_at' => date('Y-m-d H:i:s')]);
+                } else {
+                    $db->table('participant_documents')->insert([
+                        'participant_id' => $participantId,
+                        'type' => $type,
+                        'file_path' => $path,
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s'),
+                    ]);
+                }
+            }
+        }
+
+        return redirect()->to('agency/documents/' . $participantId)->with('msg', 'Berkas berhasil diperbarui.');
     }
 
     public function checklist($id)

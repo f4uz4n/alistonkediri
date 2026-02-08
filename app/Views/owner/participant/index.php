@@ -4,7 +4,12 @@
 <div class="row align-items-center mb-5">
     <div class="col-12 col-md-6">
         <h2 class="fw-800 text-dark mb-1">Daftar Jamaah</h2>
-        <p class="text-secondary">Pantau pendaftaran jamaah dari seluruh agensi</p>
+        <p class="text-secondary mb-0">Pantau pendaftaran jamaah dari seluruh agensi</p>
+    </div>
+    <div class="col-12 col-md-6 text-md-end mt-3 mt-md-0">
+        <a href="<?= base_url('owner/participant/register') ?>" class="btn btn-primary rounded-pill px-4 fw-bold">
+            <i class="bi bi-person-plus me-2"></i>Tambah Jamaah
+        </a>
     </div>
 </div>
 
@@ -121,28 +126,16 @@
                                     </div>
                                 </td>
                                 <td class="pe-4 text-end">
-                                    <div class="d-flex justify-content-end gap-2">
-                                        <button type="button" 
-                                                class="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center btn-history" 
-                                                style="width: 32px; height: 32px;"
-                                                data-id="<?= $part['id'] ?>"
-                                                data-name="<?= esc($part['name']) ?>"
-                                                title="Riwayat Pembayaran">
-                                            <i class="bi bi-clock-history"></i>
-                                        </button>
-                                        <a href="<?= base_url('owner/participant/receipt/' . $part['id']) ?>" 
-                                           target="_blank"
-                                           class="btn btn-outline-primary btn-sm rounded-circle d-flex align-items-center justify-content-center" 
-                                           style="width: 32px; height: 32px;"
-                                           title="Cetak Kwitansi">
-                                            <i class="bi bi-printer"></i>
+                                    <div class="d-flex justify-content-end gap-1 flex-wrap">
+                                        <a href="<?= base_url('owner/participant/kelola/' . $part['id']) ?>" 
+                                           class="btn btn-success btn-sm rounded-pill px-3 d-flex align-items-center"
+                                           title="Kelola (jadwal, hotel, kamar)">
+                                            <i class="bi bi-gear-fill me-1"></i> Kelola
                                         </a>
-                                        <a href="<?= base_url('owner/participant/documents/' . $part['id']) ?>" 
-                                           class="btn btn-primary btn-sm rounded-circle d-flex align-items-center justify-content-center shadow-sm"
-                                           style="width: 32px; height: 32px;"
-                                           title="Lihat Berkas">
-                                            <i class="bi bi-file-earmark-check"></i>
-                                        </a>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center btn-history" style="width: 32px; height: 32px;" data-id="<?= $part['id'] ?>" data-name="<?= esc($part['name']) ?>" title="Riwayat Pembayaran"><i class="bi bi-clock-history"></i></button>
+                                        <a href="<?= base_url('owner/participant/receipt/' . $part['id']) ?>" target="_blank" class="btn btn-outline-primary btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Cetak Kwitansi"><i class="bi bi-printer"></i></a>
+                                        <a href="<?= base_url('owner/participant/registration-form/' . $part['id']) ?>" target="_blank" class="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Cetak Formulir Pendaftaran"><i class="bi bi-file-earmark-text"></i></a>
+                                        <a href="<?= base_url('owner/participant/documents/' . $part['id']) ?>" class="btn btn-primary btn-sm rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 32px; height: 32px;" title="Lihat Berkas"><i class="bi bi-file-earmark-check"></i></a>
                                     </div>
                                 </td>
                             </tr>

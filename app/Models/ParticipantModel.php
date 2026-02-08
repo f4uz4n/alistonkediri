@@ -18,9 +18,14 @@ class ParticipantModel extends Model
         'kecamatan', 'kabupaten', 'provinsi', 'religion',
         'marital_status', 'occupation', 'blood_type', 'nationality',
         'phone', 'status', 'is_verified', 'verified_at', 'verified_by',
-        'passport_number', 'passport_issuance_date', 'passport_expiry_date',
-        'passport_issuance_city', 'emergency_name', 'emergency_relationship',
-        'emergency_phone', 'checklist'
+        'has_passport', 'passport_number', 'passport_type', 'passport_full_name', 'passport_place_of_birth',
+        'passport_issuance_date', 'passport_expiry_date', 'passport_issuance_city',
+        'passport_reg_number', 'passport_issuing_office', 'passport_name_idn',
+        'emergency_name', 'emergency_relationship',
+        'emergency_phone', 'checklist',
+        'hotel_upgrade_id', 'room_upgrade_id', 'upgrade_cost',
+        'is_boarded', 'boarded_at',
+        'cancelled_at', 'refund_amount', 'cancellation_notes'
     ];
 
     // Dates

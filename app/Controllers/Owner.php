@@ -141,6 +141,79 @@ class Owner extends BaseController
         return redirect()->to('owner/materials')->with('msg', 'Materi berhasil diupload');
     }
 
+    public function editMaterial($id)
+    {
+        $materialModel = new MaterialModel();
+        $material = $materialModel->find($id);
+        if (!$material) {
+            return redirect()->to('owner/materials')->with('error', 'Materi tidak ditemukan.');
+        }
+        return view('owner/materials/edit', ['material' => $material]);
+    }
+
+    public function updateMaterial($id)
+    {
+        $materialModel = new MaterialModel();
+        $material = $materialModel->find($id);
+        if (!$material) {
+            return redirect()->to('owner/materials')->with('error', 'Materi tidak ditemukan.');
+        }
+        $type = $this->request->getPost('type');
+        $rules = [
+            'type' => 'required|in_list[file,youtube,url]',
+            'title' => 'required|min_length[3]|max_length[255]',
+        ];
+        if ($type == 'file') {
+            $file = $this->request->getFile('attachment');
+            if ($file && $file->isValid() && !$file->hasMoved()) {
+                $rules['attachment'] = ['uploaded[attachment]', 'mime_in[attachment,application/pdf,image/jpg,image/jpeg,image/png]', 'max_size[attachment,4096]'];
+            }
+        } else {
+            $rules['url'] = 'required|valid_url';
+        }
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+        $data = ['type' => $type, 'title' => $this->request->getPost('title'), 'description' => $this->request->getPost('description')];
+        if ($type == 'file') {
+            $file = $this->request->getFile('attachment');
+            if ($file && $file->isValid() && !$file->hasMoved()) {
+                if (!empty($material['file_path']) && is_file(ROOTPATH . 'public/' . $material['file_path'])) {
+                    @unlink(ROOTPATH . 'public/' . $material['file_path']);
+                }
+                $newName = $file->getRandomName();
+                $file->move(ROOTPATH . 'public/uploads', $newName);
+                $data['file_path'] = 'uploads/' . $newName;
+                $data['url'] = null;
+            } else {
+                $data['file_path'] = $material['file_path'];
+                $data['url'] = null;
+            }
+        } else {
+            $data['url'] = $this->request->getPost('url');
+            if (!empty($material['file_path']) && is_file(ROOTPATH . 'public/' . $material['file_path'])) {
+                @unlink(ROOTPATH . 'public/' . $material['file_path']);
+            }
+            $data['file_path'] = null;
+        }
+        $materialModel->update($id, $data);
+        return redirect()->to('owner/materials')->with('msg', 'Materi berhasil diperbarui.');
+    }
+
+    public function deleteMaterial($id)
+    {
+        $materialModel = new MaterialModel();
+        $material = $materialModel->find($id);
+        if (!$material) {
+            return redirect()->to('owner/materials')->with('error', 'Materi tidak ditemukan.');
+        }
+        if (!empty($material['file_path']) && is_file(ROOTPATH . 'public/' . $material['file_path'])) {
+            @unlink(ROOTPATH . 'public/' . $material['file_path']);
+        }
+        $materialModel->delete($id);
+        return redirect()->to('owner/materials')->with('msg', 'Materi berhasil dihapus.');
+    }
+
     public function paymentVerification()
     {
         $paymentModel = new \App\Models\PaymentModel();
@@ -270,6 +343,13 @@ class Owner extends BaseController
             $docsFormatted[$doc['type']] = $doc['file_path'];
         }
 
+        $total_goal = 7;
+        $verified_count = $db->table('participant_documents')
+            ->where('participant_id', $id)
+            ->where('is_verified', 1)
+            ->countAllResults();
+        $doc_progress = $total_goal > 0 ? min(100, round(($verified_count / $total_goal) * 100)) : 0;
+
         // Get equipment status
         $collectedEquipment = $equipmentModel->getByParticipant($id);
         $collectedMap = [];
@@ -286,6 +366,9 @@ class Owner extends BaseController
             'documents' => $docsFormatted,
             'freebies' => $freebies,
             'collectedMap' => $collectedMap,
+            'doc_progress' => $doc_progress,
+            'verified_count' => $verified_count,
+            'total_goal' => $total_goal,
             'is_owner' => true
         ]);
     }    public function settings()
@@ -318,6 +401,7 @@ class Owner extends BaseController
             'email' => $this->request->getPost('email'),
             'phone' => $this->request->getPost('phone'),
             'address' => $this->request->getPost('address'),
+            'company_name' => $this->request->getPost('company_name'),
         ];
 
         // Optional password update
@@ -350,5 +434,177 @@ class Owner extends BaseController
         }
 
         return redirect()->back()->withInput()->with('error', 'Gagal memperbarui pengaturan');
+    }
+
+    /**
+     * Kelola testimoni jamaah: daftar semua, filter status, verifikasi agar dipublikasikan.
+     */
+    public function testimoni()
+    {
+        $testimonialModel = new \App\Models\TestimonialModel();
+        $status = $this->request->getGet('status');
+        $filters = [];
+        if ($status && in_array($status, ['pending', 'verified'], true)) {
+            $filters['status'] = $status;
+        }
+        $data = [
+            'testimonials' => $testimonialModel->getListForAdmin($filters),
+            'filter_status' => $status,
+        ];
+        return view('owner/testimoni/index', $data);
+    }
+
+    /**
+     * Verifikasi testimoni agar tampil di halaman depan.
+     */
+    public function verifyTestimoni($id)
+    {
+        $testimonialModel = new \App\Models\TestimonialModel();
+        $row = $testimonialModel->find($id);
+        if (!$row) {
+            return redirect()->to('owner/testimoni')->with('error', 'Testimoni tidak ditemukan.');
+        }
+        $testimonialModel->update($id, [
+            'status' => 'verified',
+            'verified_at' => date('Y-m-d H:i:s'),
+            'verified_by' => session()->get('id'),
+        ]);
+        return redirect()->to('owner/testimoni')->with('msg', 'Testimoni telah diverifikasi dan akan tampil di halaman depan.');
+    }
+
+    /**
+     * Form edit testimoni.
+     */
+    public function editTestimoni($id)
+    {
+        $testimonialModel = new \App\Models\TestimonialModel();
+        $packageModel = new \App\Models\PackageModel();
+        $row = $testimonialModel->find($id);
+        if (!$row) {
+            return redirect()->to('owner/testimoni')->with('error', 'Testimoni tidak ditemukan.');
+        }
+        $packages = $packageModel->orderBy('name', 'ASC')->findAll();
+        $data = [
+            'testimonial' => $row,
+            'packages' => $packages,
+        ];
+        return view('owner/testimoni/edit', $data);
+    }
+
+    /**
+     * Update testimoni (nama, paket, isi, rating, status).
+     */
+    public function updateTestimoni($id)
+    {
+        $testimonialModel = new \App\Models\TestimonialModel();
+        $row = $testimonialModel->find($id);
+        if (!$row) {
+            return redirect()->to('owner/testimoni')->with('error', 'Testimoni tidak ditemukan.');
+        }
+        $rules = [
+            'name' => 'required|min_length[2]|max_length[255]',
+            'testimonial' => 'required|min_length[10]',
+            'rating' => 'required|in_list[1,2,3,4,5]',
+            'status' => 'required|in_list[pending,verified]',
+        ];
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('error', 'Lengkapi nama, testimoni (min. 10 karakter), rating, dan status.');
+        }
+        $package_id = $this->request->getPost('package_id');
+        $newStatus = $this->request->getPost('status');
+        $updateData = [
+            'name' => $this->request->getPost('name'),
+            'package_id' => $package_id ? (int) $package_id : null,
+            'testimonial' => $this->request->getPost('testimonial'),
+            'rating' => (int) $this->request->getPost('rating'),
+            'status' => $newStatus,
+        ];
+        if ($newStatus === 'verified') {
+            $updateData['verified_at'] = $row['verified_at'] ?? date('Y-m-d H:i:s');
+            $updateData['verified_by'] = $row['verified_by'] ?? session()->get('id');
+        } else {
+            $updateData['verified_at'] = null;
+            $updateData['verified_by'] = null;
+        }
+        $testimonialModel->update($id, $updateData);
+        return redirect()->to('owner/testimoni')->with('msg', 'Testimoni berhasil diperbarui.');
+    }
+
+    /**
+     * Hapus testimoni.
+     */
+    public function deleteTestimoni($id)
+    {
+        $testimonialModel = new \App\Models\TestimonialModel();
+        $row = $testimonialModel->find($id);
+        if (!$row) {
+            return redirect()->to('owner/testimoni')->with('error', 'Testimoni tidak ditemukan.');
+        }
+        $testimonialModel->delete($id);
+        return redirect()->to('owner/testimoni')->with('msg', 'Testimoni telah dihapus.');
+    }
+
+    /**
+     * Kelola banner (upload foto) untuk slider halaman login.
+     */
+    public function banners()
+    {
+        $bannerModel = new \App\Models\BannerModel();
+        $data = [
+            'banners' => $bannerModel->orderBy('sort_order', 'ASC')->orderBy('id', 'ASC')->findAll(),
+        ];
+        return view('owner/banners/index', $data);
+    }
+
+    /**
+     * Simpan banner baru (upload gambar).
+     */
+    public function storeBanner()
+    {
+        if (!$this->validate([
+            'image' => 'uploaded[image]|max_size[image,5120]|is_image[image]',
+        ])) {
+            return redirect()->to('owner/banners')->with('error', 'Pilih file gambar (JPG/PNG, maks. 5MB).');
+        }
+        $file = $this->request->getFile('image');
+        if (!$file->isValid() || $file->hasMoved()) {
+            return redirect()->to('owner/banners')->with('error', 'Gagal mengunggah file.');
+        }
+        $dir = FCPATH . 'uploads/banners';
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        $newName = $file->getRandomName();
+        $file->move($dir, $newName);
+        $path = 'uploads/banners/' . $newName;
+        if (!is_file(FCPATH . $path)) {
+            return redirect()->to('owner/banners')->with('error', 'File gagal disimpan.');
+        }
+
+        $bannerModel = new \App\Models\BannerModel();
+        $maxOrder = $bannerModel->selectMax('sort_order')->get()->getRowArray();
+        $sortOrder = ((int)($maxOrder['sort_order'] ?? 0)) + 1;
+        $bannerModel->insert([
+            'image' => $path,
+            'sort_order' => $sortOrder,
+        ]);
+        return redirect()->to('owner/banners')->with('msg', 'Banner berhasil diunggah.');
+    }
+
+    /**
+     * Hapus banner.
+     */
+    public function deleteBanner($id)
+    {
+        $bannerModel = new \App\Models\BannerModel();
+        $row = $bannerModel->find($id);
+        if (!$row) {
+            return redirect()->to('owner/banners')->with('error', 'Banner tidak ditemukan.');
+        }
+        if (!empty($row['image']) && is_file(FCPATH . $row['image'])) {
+            @unlink(FCPATH . $row['image']);
+        }
+        $bannerModel->delete($id);
+        return redirect()->to('owner/banners')->with('msg', 'Banner berhasil dihapus.');
     }
 }

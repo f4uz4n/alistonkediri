@@ -1,12 +1,11 @@
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('content') ?>
+<?php helper('branding'); ?>
 <div class="row justify-content-center align-items-center" style="min-height: 70vh;">
     <div class="col-md-5 col-lg-4">
         <div class="text-center mb-4">
-            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
-                <i class="bi bi-airplane-engines-fill fs-3"></i>
-            </div>
+            <img src="<?= get_company_logo() ?>" alt="Logo Perusahaan" class="mb-3" style="max-height: 80px; width: auto;">
             <h2 class="fw-bold text-dark">Selamat Datang</h2>
             <p class="text-secondary">Silakan masuk untuk melanjutkan</p>
         </div>
@@ -40,6 +39,11 @@
                     <button type="submit" class="btn btn-primary w-100 py-3 fw-bold shadow-sm mb-3">
                         Masuk <i class="bi bi-arrow-right ms-2"></i>
                     </button>
+                    <div class="text-center pt-2">
+                        <a href="<?= base_url('testimoni-jamaah') ?>" class="text-decoration-none small text-secondary">
+                            <i class="bi bi-chat-quote me-1"></i> Kirim Testimoni Jamaah
+                        </a>
+                    </div>
                 </form>
             </div>
         </div>

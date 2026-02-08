@@ -65,24 +65,29 @@
                 <div class="card-body p-4 p-md-5">
                     <div class="row g-4">
                         <div class="col-12 col-md-6">
-                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Hotel Mekkah</label>
-                            <input type="text" name="hotel_mekkah" class="form-control bg-light border-0 mb-2" placeholder="Nama Hotel" required>
-                            <select name="hotel_mekkah_stars" class="form-select bg-light border-0">
-                                <option value="3">3 Bintang</option>
-                                <option value="4" selected>4 Bintang</option>
-                                <option value="5">5 Bintang</option>
+                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Hotel <?= esc($city1_name ?? 'Kota 1') ?></label>
+                            <select name="hotel_mekkah_id" class="form-select bg-light border-0" <?= !empty($hotels_all) ? 'required' : '' ?>>
+                                <option value="">— Pilih hotel dari master —</option>
+                                <?php foreach ($hotels_all ?? [] as $h): ?>
+                                <option value="<?= $h['id'] ?>"><?= esc($h['name']) ?> (<?= esc($h['city'] ?? '') ?>) — <?= (int)($h['star_rating'] ?? 0) ?> Bintang</option>
+                                <?php endforeach; ?>
                             </select>
+                            <p class="small text-muted mt-1 mb-0">Bintang hotel mengikuti data master.</p>
                         </div>
                         <div class="col-12 col-md-6">
-                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Hotel Madinah</label>
-                            <input type="text" name="hotel_madinah" class="form-control bg-light border-0 mb-2" placeholder="Nama Hotel" required>
-                            <select name="hotel_madinah_stars" class="form-select bg-light border-0">
-                                <option value="3">3 Bintang</option>
-                                <option value="4" selected>4 Bintang</option>
-                                <option value="5">5 Bintang</option>
+                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Hotel <?= esc($city2_name ?? 'Kota 2') ?></label>
+                            <select name="hotel_madinah_id" class="form-select bg-light border-0" <?= !empty($hotels_all) ? 'required' : '' ?>>
+                                <option value="">— Pilih hotel dari master —</option>
+                                <?php foreach ($hotels_all ?? [] as $h): ?>
+                                <option value="<?= $h['id'] ?>"><?= esc($h['name']) ?> (<?= esc($h['city'] ?? '') ?>) — <?= (int)($h['star_rating'] ?? 0) ?> Bintang</option>
+                                <?php endforeach; ?>
                             </select>
+                            <p class="small text-muted mt-1 mb-0">Bintang hotel mengikuti data master.</p>
                         </div>
                     </div>
+                    <?php if (empty($hotels_all)): ?>
+                    <p class="small text-muted mt-2 mb-0">Belum ada hotel di master. <a href="<?= base_url('owner/hotels') ?>">Tambah di Master Hotel & Kamar</a>.</p>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -130,13 +135,15 @@
                             <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Rute</label>
                             <input type="text" name="flight_route" class="form-control bg-light border-0" placeholder="SUB - JED" required>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Harga (Nominal)</label>
-                            <input type="number" step="0.01" name="price" class="form-control bg-light border-0" placeholder="31.9" required>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Harga Paket (Rupiah)</label>
+                            <input type="text" name="price" class="form-control bg-light border-0 format-rupiah" placeholder="31.200.000" data-value="0" required>
+                            <small class="text-muted">Input nominal penuh. Tampilan: <strong id="priceDisplayPreview">0 JT</strong></small>
                         </div>
-                        <div class="col-md-1">
-                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Unit</label>
-                            <input type="text" name="price_unit" class="form-control bg-light border-0 text-center fw-bold" value="JT" required>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Komisi Agency (per pax)</label>
+                            <input type="text" name="commission_per_pax" class="form-control bg-light border-0 format-rupiah" placeholder="500.000" value="0" data-value="0">
+                            <small class="text-muted">Nominal komisi per penumpang untuk agency (format Rupiah, tanpa desimal)</small>
                         </div>
                     </div>
                 </div>
@@ -150,4 +157,45 @@
         </form>
     </div>
 </div>
+<script>
+(function() {
+    function formatRupiah(el) {
+        var v = el.value.replace(/\D/g, '');
+        if (v === '') { el.value = ''; el.dataset.value = '0'; return; }
+        el.dataset.value = v;
+        var n = parseInt(v, 10);
+        el.value = n.toLocaleString('id-ID', { maximumFractionDigits: 0 });
+    }
+    function initRupiah() {
+        document.querySelectorAll('.format-rupiah').forEach(function(el) {
+            el.addEventListener('input', function() { formatRupiah(this); });
+            el.addEventListener('blur', function() { formatRupiah(this); });
+            if (el.value && el.value !== '0') formatRupiah(el);
+        });
+        document.querySelector('form').addEventListener('submit', function() {
+            document.querySelectorAll('.format-rupiah').forEach(function(el) {
+                el.value = el.dataset.value || el.value.replace(/\D/g, '') || '0';
+            });
+        });
+        var priceInput = document.querySelector('input[name="price"]');
+        var pricePreview = document.getElementById('priceDisplayPreview');
+        if (priceInput && pricePreview) {
+            function updatePricePreview() {
+                var v = (priceInput.dataset.value || priceInput.value.replace(/\D/g, '') || '0').replace(/^\0+/, '') || '0';
+                var num = parseInt(v, 10) || 0;
+                if (num >= 1000000) {
+                    var j = num / 1000000;
+                    pricePreview.textContent = j.toFixed(1).replace('.', ',') + ' JT';
+                } else {
+                    pricePreview.textContent = num ? (num / 1000000).toFixed(1).replace('.', ',') + ' JT' : '0 JT';
+                }
+            }
+            priceInput.addEventListener('input', function() { formatRupiah(this); updatePricePreview(); });
+            priceInput.addEventListener('blur', function() { updatePricePreview(); });
+        }
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initRupiah);
+    else initRupiah();
+})();
+</script>
 <?= $this->endSection() ?>

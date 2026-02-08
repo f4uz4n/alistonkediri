@@ -13,3 +13,15 @@ if (!function_exists('get_company_logo')) {
         return base_url('assets/img/logo_.png');
     }
 }
+
+if (!function_exists('get_company_name')) {
+    function get_company_name()
+    {
+        $db = \Config\Database::connect();
+        $owner = $db->table('users')->where('role', 'owner')->get()->getRowArray();
+        if ($owner && !empty($owner['company_name'])) {
+            return $owner['company_name'];
+        }
+        return 'Aliston Tour & Travel';
+    }
+}

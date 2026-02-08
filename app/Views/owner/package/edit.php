@@ -71,24 +71,55 @@
                 <div class="card-body p-4 p-md-5">
                     <div class="row g-4">
                         <div class="col-12 col-md-6">
-                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Hotel Mekkah</label>
-                            <input type="text" name="hotel_mekkah" class="form-control bg-light border-0 mb-2" value="<?= esc($package['hotel_mekkah']) ?>" required>
-                            <select name="hotel_mekkah_stars" class="form-select bg-light border-0">
-                                <option value="3" <?= $package['hotel_mekkah_stars']==3?'selected':'' ?>>3 Bintang</option>
-                                <option value="4" <?= $package['hotel_mekkah_stars']==4?'selected':'' ?>>4 Bintang</option>
-                                <option value="5" <?= $package['hotel_mekkah_stars']==5?'selected':'' ?>>5 Bintang</option>
+                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Hotel <?= esc($city1_name ?? 'Kota 1') ?></label>
+                            <select name="hotel_mekkah_id" class="form-select bg-light border-0">
+                                <option value="">— Pilih hotel dari master —</option>
+                                <?php
+                                $list1 = $hotels_all ?? [];
+                                $id1 = (int)($package['hotel_mekkah_id'] ?? 0);
+                                foreach ($list1 as $h) {
+                                    if ($id1 && (int)$h['id'] === $id1) {
+                                        $sel1 = 'selected';
+                                    } elseif (!$id1 && trim((string)($package['hotel_mekkah'] ?? '')) === trim($h['name'])) {
+                                        $sel1 = 'selected';
+                                    } else {
+                                        $sel1 = '';
+                                    }
+                                    $star1 = (int)($h['star_rating'] ?? 0);
+                                    $cityName1 = esc($h['city'] ?? '');
+                                    echo '<option value="' . (int)$h['id'] . '" ' . $sel1 . '>' . esc($h['name']) . ' (' . $cityName1 . ') — ' . $star1 . ' Bintang</option>';
+                                }
+                                ?>
                             </select>
+                            <p class="small text-muted mt-1 mb-0">Bintang hotel mengikuti data master.</p>
                         </div>
                         <div class="col-12 col-md-6">
-                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Hotel Madinah</label>
-                            <input type="text" name="hotel_madinah" class="form-control bg-light border-0 mb-2" value="<?= esc($package['hotel_madinah']) ?>" required>
-                            <select name="hotel_madinah_stars" class="form-select bg-light border-0">
-                                <option value="3" <?= $package['hotel_madinah_stars']==3?'selected':'' ?>>3 Bintang</option>
-                                <option value="4" <?= $package['hotel_madinah_stars']==4?'selected':'' ?>>4 Bintang</option>
-                                <option value="5" <?= $package['hotel_madinah_stars']==5?'selected':'' ?>>5 Bintang</option>
+                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Hotel <?= esc($city2_name ?? 'Kota 2') ?></label>
+                            <select name="hotel_madinah_id" class="form-select bg-light border-0">
+                                <option value="">— Pilih hotel dari master —</option>
+                                <?php
+                                $list2 = $hotels_all ?? [];
+                                $id2 = (int)($package['hotel_madinah_id'] ?? 0);
+                                foreach ($list2 as $h) {
+                                    if ($id2 && (int)$h['id'] === $id2) {
+                                        $sel2 = 'selected';
+                                    } elseif (!$id2 && trim((string)($package['hotel_madinah'] ?? '')) === trim($h['name'])) {
+                                        $sel2 = 'selected';
+                                    } else {
+                                        $sel2 = '';
+                                    }
+                                    $star2 = (int)($h['star_rating'] ?? 0);
+                                    $cityName2 = esc($h['city'] ?? '');
+                                    echo '<option value="' . (int)$h['id'] . '" ' . $sel2 . '>' . esc($h['name']) . ' (' . $cityName2 . ') — ' . $star2 . ' Bintang</option>';
+                                }
+                                ?>
                             </select>
+                            <p class="small text-muted mt-1 mb-0">Bintang hotel mengikuti data master.</p>
                         </div>
                     </div>
+                    <?php if (empty($hotels_all)): ?>
+                    <p class="small text-muted mt-2 mb-0">Belum ada hotel di master. <a href="<?= base_url('owner/hotels') ?>">Tambah di Master Hotel & Kamar</a>.</p>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -136,13 +167,27 @@
                             <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Rute</label>
                             <input type="text" name="flight_route" class="form-control bg-light border-0" value="<?= esc($package['flight_route']) ?>" required>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Harga (Nominal)</label>
-                            <input type="number" step="0.01" name="price" class="form-control bg-light border-0" value="<?= esc($package['price']) ?>" required>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Harga Paket (Rupiah)</label>
+                            <?php
+                            $priceVal = (float)($package['price'] ?? 0);
+                            if ($priceVal >= 1_000_000) {
+                                $priceRupiah = (int) $priceVal;
+                                $priceDisplay = number_format($priceVal / 1e6, 1, ',', '') . ' JT';
+                            } else {
+                                $priceRupiah = (int) ($priceVal * 1_000_000);
+                                $priceDisplay = number_format($priceVal, 1, ',', '') . ' JT';
+                            }
+                            $priceFormatted = number_format($priceRupiah, 0, '', '.');
+                            ?>
+                            <input type="text" name="price" class="form-control bg-light border-0 format-rupiah" value="<?= esc($priceFormatted) ?>" data-value="<?= esc((string)$priceRupiah) ?>" placeholder="31.200.000" required>
+                            <small class="text-muted">Tampilan: <strong><?= $priceDisplay ?></strong></small>
                         </div>
-                        <div class="col-md-1">
-                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Unit</label>
-                            <input type="text" name="price_unit" class="form-control bg-light border-0 text-center fw-bold" value="<?= esc($package['price_unit']) ?>" required>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1">Komisi Agency (per pax)</label>
+                            <?php $komisi = (float)($package['commission_per_pax'] ?? 0); ?>
+                            <input type="text" name="commission_per_pax" class="form-control bg-light border-0 format-rupiah" placeholder="500.000" value="<?= esc(number_format($komisi, 0, '', '.')) ?>" data-value="<?= esc((string)(int)$komisi) ?>">
+                            <small class="text-muted">Nominal komisi per penumpang untuk agency (format Rupiah, tanpa desimal)</small>
                         </div>
                     </div>
                 </div>
@@ -156,4 +201,29 @@
         </form>
     </div>
 </div>
+<script>
+(function() {
+    function formatRupiah(el) {
+        var v = el.value.replace(/\D/g, '');
+        if (v === '') { el.value = ''; el.dataset.value = '0'; return; }
+        el.dataset.value = v;
+        var n = parseInt(v, 10);
+        el.value = n.toLocaleString('id-ID', { maximumFractionDigits: 0 });
+    }
+    function initRupiah() {
+        document.querySelectorAll('.format-rupiah').forEach(function(el) {
+            el.addEventListener('input', function() { formatRupiah(this); });
+            el.addEventListener('blur', function() { formatRupiah(this); });
+            if (el.value && el.value !== '0') formatRupiah(el);
+        });
+        document.querySelector('form').addEventListener('submit', function() {
+            document.querySelectorAll('.format-rupiah').forEach(function(el) {
+                el.value = el.dataset.value || el.value.replace(/\D/g, '') || '0';
+            });
+        });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initRupiah);
+    else initRupiah();
+})();
+</script>
 <?= $this->endSection() ?>

@@ -68,6 +68,12 @@
                                             <i class="bi bi-box-arrow-up-right me-1"></i> Buka Link
                                         </a>
                                     <?php endif; ?>
+                                    <a href="<?= base_url('owner/materials/edit/' . $material['id']) ?>" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold">
+                                        <i class="bi bi-pencil me-1"></i> Edit
+                                    </a>
+                                    <a href="<?= base_url('owner/materials/delete/' . $material['id']) ?>" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold" onclick="return confirm('Yakin ingin menghapus materi ini?');">
+                                        <i class="bi bi-trash me-1"></i> Hapus
+                                    </a>
                                 </td>
                             </tr>
                             <?php endforeach; ?>

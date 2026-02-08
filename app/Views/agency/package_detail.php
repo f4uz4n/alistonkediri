@@ -1,6 +1,7 @@
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('content') ?>
+<?php helper('package'); ?>
 <div class="row align-items-center mb-5">
     <div class="col-12 col-md-8">
         <nav aria-label="breadcrumb">
@@ -109,7 +110,7 @@
                 <i class="bi bi-tags-fill" style="font-size: 10rem;"></i>
             </div>
             <h6 class="text-white-50 fw-bold text-uppercase ls-2 mb-2">Harga Paket Mulai Dari</h6>
-            <h1 class="fw-800 mb-2 display-6"><?= esc($package['price']) ?><small class="fs-4 ms-2"><?= esc($package['price_unit']) ?></small></h1>
+            <h1 class="fw-800 mb-2 display-6"><?= format_price_display($package['price']) ?></h1>
             <p class="mb-0 text-white-50 small">*Sesuai syarat dan ketentuan berlaku</p>
         </div>
 
@@ -120,10 +121,11 @@
                     <i class="bi bi-stars text-warning fs-4"></i>
                 </div>
                 <div>
-                    <h6 class="fw-bold text-dark mb-0"><?= esc($package['hotel_mekkah']) ?></h6>
-                    <small class="text-secondary">Hotel Mekkah</small>
+                    <?php $d1 = $package['display_hotel_1'] ?? null; ?>
+                    <h6 class="fw-bold text-dark mb-0"><?= $d1 ? esc($d1['name']) : esc($package['hotel_mekkah'] ?? '—') ?></h6>
+                    <small class="text-secondary"><?= $d1 && $d1['city'] ? esc($d1['city']) : ('Hotel ' . esc($city1_name ?? 'Kota 1')) ?></small>
                     <div class="text-warning mt-1" style="font-size: 0.7rem;">
-                        <?= str_repeat('★', (int)$package['hotel_mekkah_stars']) ?>
+                        <?= $d1 ? str_repeat('★', $d1['stars']) : str_repeat('★', (int)($package['hotel_mekkah_stars'] ?? 0)) ?>
                     </div>
                 </div>
             </div>
@@ -132,10 +134,11 @@
                     <i class="bi bi-stars text-warning fs-4"></i>
                 </div>
                 <div>
-                    <h6 class="fw-bold text-dark mb-0"><?= esc($package['hotel_madinah']) ?></h6>
-                    <small class="text-secondary">Hotel Madinah</small>
+                    <?php $d2 = $package['display_hotel_2'] ?? null; ?>
+                    <h6 class="fw-bold text-dark mb-0"><?= $d2 ? esc($d2['name']) : esc($package['hotel_madinah'] ?? '—') ?></h6>
+                    <small class="text-secondary"><?= $d2 && $d2['city'] ? esc($d2['city']) : ('Hotel ' . esc($city2_name ?? 'Kota 2')) ?></small>
                     <div class="text-warning mt-1" style="font-size: 0.7rem;">
-                        <?= str_repeat('★', (int)$package['hotel_madinah_stars']) ?>
+                        <?= $d2 ? str_repeat('★', $d2['stars']) : str_repeat('★', (int)($package['hotel_madinah_stars'] ?? 0)) ?>
                     </div>
                 </div>
             </div>
@@ -154,6 +157,42 @@
                 </div>
             </div>
         </div>
+
+        <?php $commission_per_pax = (float)($package['commission_per_pax'] ?? 0); ?>
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mt-4">
+            <h5 class="fw-bold text-dark mb-3 border-bottom pb-3"><i class="bi bi-cash-stack me-2 text-success"></i>Komisi Agency</h5>
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <span class="text-secondary small">Komisi per penumpang</span>
+                <div class="d-flex align-items-center gap-2">
+                    <span id="commissionDisplay" class="fw-bold text-dark">Rp ••••••</span>
+                    <span id="commissionValue" class="fw-bold text-success d-none">Rp <?= number_format($commission_per_pax, 0, ',', '.') ?></span>
+                    <button type="button" id="toggleCommission" class="btn btn-sm btn-light border rounded-pill px-3 py-1" title="Tampilkan / Sembunyikan komisi" aria-label="Toggle komisi">
+                        <i class="bi bi-eye" id="commissionIcon"></i>
+                        <span id="commissionLabel">Tampilkan</span>
+                    </button>
+                </div>
+            </div>
+            <p class="text-muted small mb-0 mt-2">Klik untuk menampilkan atau menyembunyikan nominal komisi.</p>
+        </div>
     </div>
 </div>
+
+<script>
+(function() {
+    var display = document.getElementById('commissionDisplay');
+    var value = document.getElementById('commissionValue');
+    var btn = document.getElementById('toggleCommission');
+    var icon = document.getElementById('commissionIcon');
+    var label = document.getElementById('commissionLabel');
+    var visible = false;
+    function toggle() {
+        visible = !visible;
+        display.classList.toggle('d-none', visible);
+        value.classList.toggle('d-none', !visible);
+        icon.className = visible ? 'bi bi-eye-slash' : 'bi bi-eye';
+        label.textContent = visible ? 'Sembunyikan' : 'Tampilkan';
+    }
+    if (btn) btn.addEventListener('click', toggle);
+})();
+</script>
 <?= $this->endSection() ?>

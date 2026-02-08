@@ -285,10 +285,13 @@
                         <span>Daftar Agensi</span>
                     </a>
                 </li>
+                <li class="nav-item border-top my-2 pt-2">
+                    <small class="text-secondary fw-bold text-uppercase px-3" style="font-size: 0.65rem;">Daftar Jamaah</small>
+                </li>
                 <li class="nav-item">
-                    <a href="<?= base_url('owner/participant') ?>" class="nav-link <?= (strpos(current_url(), 'owner/participant') !== false && strpos(current_url(), 'documents') === false && strpos(current_url(), 'equipment') === false) ? 'active' : '' ?>">
+                    <a href="<?= base_url('owner/participant') ?>" class="nav-link <?= (strpos(current_url(), 'owner/participant') !== false && strpos(current_url(), 'documents') === false && strpos(current_url(), 'equipment') === false && strpos(current_url(), 'kelola') === false && strpos(current_url(), 'cancellations') === false && strpos(current_url(), 'cancel-form') === false && strpos(current_url(), 'boarding-list') === false && strpos(current_url(), 'register') === false) ? 'active' : '' ?>">
                         <i class="bi bi-people-fill"></i>
-                        <span>Daftar Jamaah</span>
+                        <span>Semua Jamaah</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -303,7 +306,40 @@
                         <span>Verifikasi Pembayaran</span>
                     </a>
                 </li>
-                                <li class="nav-item border-top my-2 pt-2">
+                <li class="nav-item">
+                    <a href="<?= base_url('owner/participant/cancellations') ?>" class="nav-link <?= strpos(current_url(), 'cancellations') !== false || strpos(current_url(), 'cancel-form') !== false ? 'active' : '' ?>">
+                        <i class="bi bi-x-circle-fill"></i>
+                        <span>Pembatalan</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= base_url('owner/participant/boarding-list') ?>" class="nav-link <?= strpos(current_url(), 'boarding-list') !== false ? 'active' : '' ?>">
+                        <i class="bi bi-airplane-engines-fill"></i>
+                        <span>Boarding</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= base_url('owner/tabungan') ?>" class="nav-link <?= strpos(current_url(), 'owner/tabungan') !== false ? 'active' : '' ?>">
+                        <i class="bi bi-cash-coin"></i>
+                        <span>Tabungan Perjalanan</span>
+                    </a>
+                </li>
+                <li class="nav-item border-top my-2 pt-2">
+                    <small class="text-secondary fw-bold text-uppercase px-3" style="font-size: 0.65rem;">Master</small>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= base_url('owner/cities') ?>" class="nav-link <?= strpos(current_url(), 'owner/cities') !== false ? 'active' : '' ?>">
+                        <i class="bi bi-geo-alt"></i>
+                        <span>Kota</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= base_url('owner/hotels') ?>" class="nav-link <?= strpos(current_url(), 'owner/hotels') !== false ? 'active' : '' ?>">
+                        <i class="bi bi-building"></i>
+                        <span>Hotel & Kamar</span>
+                    </a>
+                </li>
+                <li class="nav-item border-top my-2 pt-2">
                     <small class="text-secondary fw-bold text-uppercase px-3" style="font-size: 0.65rem;">Perlengkapan</small>
                 </li>
                 <li class="nav-item">
@@ -334,6 +370,18 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="<?= base_url('owner/testimoni') ?>" class="nav-link <?= strpos(current_url(), 'owner/testimoni') !== false ? 'active' : '' ?>">
+                        <i class="bi bi-chat-quote"></i>
+                        <span>Testimoni Jamaah</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= base_url('owner/banners') ?>" class="nav-link <?= strpos(current_url(), 'owner/banners') !== false ? 'active' : '' ?>">
+                        <i class="bi bi-images"></i>
+                        <span>Banner Beranda</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="<?= base_url('owner/settings') ?>" class="nav-link <?= strpos(current_url(), 'settings') !== false ? 'active' : '' ?>">
                         <i class="bi bi-gear-fill"></i>
                         <span>Pengaturan Akun</span>
@@ -353,6 +401,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="<?= base_url('agency/materials') ?>" class="nav-link <?= strpos(current_url(), 'agency/materials') !== false ? 'active' : '' ?>">
+                        <i class="bi bi-cloud-arrow-down-fill"></i>
+                        <span>Materi Promosi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="<?= base_url('agency/participants') ?>" class="nav-link <?= strpos(current_url(), 'participants') !== false ? 'active' : '' ?>">
                         <i class="bi bi-people-fill"></i>
                         <span>Daftar Jamaah</span>
@@ -368,6 +422,18 @@
                     <a href="<?= base_url('agency/income') ?>" class="nav-link <?= strpos(current_url(), 'income') !== false ? 'active' : '' ?>">
                         <i class="bi bi-graph-up-arrow"></i>
                         <span>Laporan Penghasilan</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= base_url('agency/testimoni') ?>" class="nav-link <?= strpos(current_url(), 'agency/testimoni') !== false ? 'active' : '' ?>">
+                        <i class="bi bi-chat-quote"></i>
+                        <span>Testimoni Jamaah</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= base_url('agency/profile') ?>" class="nav-link <?= strpos(current_url(), 'agency/profile') !== false ? 'active' : '' ?>">
+                        <i class="bi bi-person-gear"></i>
+                        <span>Ubah Profil</span>
                     </a>
                 </li>
                 <?php endif; ?>
