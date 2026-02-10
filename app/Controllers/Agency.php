@@ -286,7 +286,15 @@ class Agency extends BaseController
         if (!$this->validate($rules)) {
             return redirect()->to("agency/tabungan/deposit/{$travelSavingId}")->withInput()->with('errors', $this->validator->getErrors());
         }
-        $amount = (float) str_replace(',', '', $this->request->getPost('amount'));
+        // Parse amount: format-rupiah mengirim angka tanpa separator (dari data-value atau value yang sudah di-strip)
+        $amountStr = $this->request->getPost('amount');
+        // Hapus semua karakter non-digit kecuali titik desimal, lalu hapus titik (ribuan separator)
+        $amount = (float) preg_replace('/[^\d]/', '', str_replace('.', '', $amountStr));
+        
+        if ($amount <= 0) {
+            return redirect()->to("agency/tabungan/deposit/{$travelSavingId}")->withInput()->with('errors', ['amount' => 'Jumlah harus lebih dari 0']);
+        }
+        
         $file = $this->request->getFile('proof');
         $proof = null;
         if ($file && $file->isValid() && !$file->hasMoved()) {
@@ -297,14 +305,19 @@ class Agency extends BaseController
             $proof = 'uploads/tabungan/' . $file->getRandomName();
             $file->move($dir, basename($proof));
         }
-        $depositModel->insert([
+        
+        $insertData = [
             'travel_saving_id' => $travelSavingId,
             'amount' => $amount,
             'payment_date' => $this->request->getPost('payment_date'),
             'proof' => $proof,
             'status' => 'pending',
             'notes' => $this->request->getPost('notes') ?: null,
-        ]);
+        ];
+        
+        if (!$depositModel->insert($insertData)) {
+            return redirect()->to("agency/tabungan/deposit/{$travelSavingId}")->withInput()->with('error', 'Gagal menyimpan setoran.');
+        }
         return redirect()->to("agency/tabungan/deposit/{$travelSavingId}")->with('msg', 'Setoran berhasil dikirim. Menunggu verifikasi admin untuk masuk ke saldo.');
     }
 
@@ -1189,5 +1202,90 @@ class Agency extends BaseController
         }
 
         return $this->response->setJSON(['status' => 'success', 'message' => 'Status kelengkapan diperbarui']);
+    }
+
+    /**
+     * Daftar boarding jamaah (read-only untuk agency)
+     */
+    public function boardingList()
+    {
+        $agencyId = session()->get('id');
+        $packageId = $this->request->getGet('package_id');
+        $departureFrom = $this->request->getGet('departure_date_from');
+        $departureTo = $this->request->getGet('departure_date_to');
+        
+        $packageModel = new \App\Models\PackageModel();
+        $packages = $packageModel->orderBy('departure_date', 'DESC')->findAll();
+
+        $participantModel = new \App\Models\ParticipantModel();
+        $builder = $participantModel
+            ->select('participants.*, travel_packages.name as package_name, travel_packages.departure_date, travel_packages.airline, travel_packages.price as package_price, users.full_name as agency_name')
+            ->join('travel_packages', 'travel_packages.id = participants.package_id')
+            ->join('users', 'users.id = participants.agency_id')
+            ->where('participants.agency_id', $agencyId)
+            ->where('participants.status !=', 'cancelled')
+            ->orderBy('travel_packages.departure_date', 'ASC')
+            ->orderBy('participants.name', 'ASC');
+
+        if ($packageId) {
+            $builder->where('participants.package_id', $packageId);
+        }
+        if ($departureFrom) {
+            $builder->where('DATE(travel_packages.departure_date) >=', $departureFrom);
+        }
+        if ($departureTo) {
+            $builder->where('DATE(travel_packages.departure_date) <=', $departureTo);
+        }
+
+        $participants = $builder->findAll();
+        $paymentModel = new \App\Models\PaymentModel();
+        $docModel = new \App\Models\DocumentModel();
+
+        foreach ($participants as &$p) {
+            $p['total_paid'] = (float)($paymentModel->getTotalPaid($p['id'])['amount'] ?? 0);
+            $p['total_target'] = (float)($p['package_price'] ?? 0) + (float)($p['upgrade_cost'] ?? 0);
+            $p['pembayaran_lunas'] = $p['total_target'] > 0 && $p['total_paid'] >= $p['total_target'];
+            $docCount = $docModel->where('participant_id', $p['id'])->where('is_verified', 1)->countAllResults();
+            $p['doc_progress'] = $docCount >= 7 ? 100 : round(($docCount / 7) * 100);
+            $p['berkas_lengkap'] = ($p['doc_progress'] >= 100);
+            $dep = $p['departure_date'] ?? null;
+            $p['days_until'] = null;
+            if ($dep) {
+                $p['days_until'] = (int) floor((strtotime(date('Y-m-d', strtotime($dep))) - strtotime(date('Y-m-d'))) / 86400);
+            }
+            $p['can_boarding'] = ($p['status'] === 'verified' && $p['berkas_lengkap'] && $p['pembayaran_lunas'] && $p['days_until'] !== null && $p['days_until'] <= 15);
+        }
+
+        $data = [
+            'participants' => $participants,
+            'packages' => $packages,
+            'selected_package' => $packageId,
+            'departure_date_from' => $departureFrom,
+            'departure_date_to' => $departureTo,
+        ];
+        return view('agency/boarding_list', $data);
+    }
+
+    /**
+     * Daftar pembatalan jamaah (read-only untuk agency)
+     */
+    public function cancellations()
+    {
+        $agencyId = session()->get('id');
+        $participantModel = new \App\Models\ParticipantModel();
+        $paymentModel = new \App\Models\PaymentModel();
+        
+        $list = $participantModel->getParticipantBuilder()
+            ->where('participants.agency_id', $agencyId)
+            ->where('participants.status', 'cancelled')
+            ->orderBy('participants.cancelled_at', 'DESC')
+            ->findAll();
+
+        foreach ($list as &$row) {
+            $row['total_paid'] = ($paymentModel->getTotalPaid($row['id'])['amount'] ?? 0);
+        }
+
+        $data = ['list' => $list];
+        return view('agency/cancellations', $data);
     }
 }

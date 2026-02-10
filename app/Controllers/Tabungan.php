@@ -48,11 +48,29 @@ class Tabungan extends BaseController
         }
         $savings = $builder->findAll();
         $pending_deposits = $this->depositModel->getPendingWithSavingAndAgency();
-        $activeTab = $this->request->getGet('tab') === 'verifikasi' ? 'verifikasi' : 'daftar';
+        $activeTab = $this->request->getGet('tab');
+        if (!in_array($activeTab, ['menabung', 'klaim'])) {
+            $activeTab = 'menabung';
+        }
+
+        // Ambil semua setoran (pending dan verified) untuk setiap tabungan
+        $all_deposits_by_saving = [];
+        foreach ($savings as $s) {
+            $deposits = $this->depositModel
+                ->select('travel_savings_deposits.*, travel_savings.name as saving_name, travel_savings.nik as saving_nik, travel_savings.phone as saving_phone, users.full_name as agency_name, users.nomor_rekening, users.nama_bank')
+                ->join('travel_savings', 'travel_savings.id = travel_savings_deposits.travel_saving_id')
+                ->join('users', 'users.id = travel_savings.agency_id')
+                ->where('travel_savings_deposits.travel_saving_id', $s['id'])
+                ->orderBy('travel_savings_deposits.payment_date', 'DESC')
+                ->orderBy('travel_savings_deposits.created_at', 'DESC')
+                ->findAll();
+            $all_deposits_by_saving[$s['id']] = $deposits;
+        }
 
         $data = [
             'savings' => $savings,
             'pending_deposits' => $pending_deposits,
+            'all_deposits_by_saving' => $all_deposits_by_saving,
             'filterStatus' => $status,
             'filterCari' => $cari,
             'activeTab' => $activeTab,

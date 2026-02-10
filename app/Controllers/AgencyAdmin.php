@@ -78,6 +78,8 @@ class AgencyAdmin extends BaseController
             'email' => $this->request->getPost('email'),
             'phone' => $this->request->getPost('phone'),
             'address' => $this->request->getPost('address'),
+            'nomor_rekening' => $this->request->getPost('nomor_rekening') ?: null,
+            'nama_bank' => $this->request->getPost('nama_bank') ?: null,
             'role' => 'agency'
         ];
 
@@ -152,6 +154,8 @@ class AgencyAdmin extends BaseController
             'email' => $this->request->getPost('email'),
             'phone' => $this->request->getPost('phone'),
             'address' => $this->request->getPost('address'),
+            'nomor_rekening' => $this->request->getPost('nomor_rekening') ?: null,
+            'nama_bank' => $this->request->getPost('nama_bank') ?: null,
         ];
 
         // Optional password update

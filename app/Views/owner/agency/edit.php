@@ -46,6 +46,20 @@
                                     <label class="form-label fw-bold small text-uppercase text-secondary ls-1 font-outfit">Alamat Lengkap</label>
                                     <textarea name="address" class="form-control bg-light border-0" rows="4" placeholder="Jl. Raya Nomor 123..."><?= esc($agency['address']) ?></textarea>
                                 </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small text-uppercase text-secondary ls-1 font-outfit">Nomor Rekening</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-0"><i class="bi bi-bank"></i></span>
+                                        <input type="text" name="nomor_rekening" value="<?= esc($agency['nomor_rekening'] ?? '') ?>" class="form-control form-control-lg bg-light border-0" placeholder="Contoh: 1234567890">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small text-uppercase text-secondary ls-1 font-outfit">Nama Bank</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-0"><i class="bi bi-building"></i></span>
+                                        <input type="text" name="nama_bank" value="<?= esc($agency['nama_bank'] ?? '') ?>" class="form-control form-control-lg bg-light border-0" placeholder="Contoh: BCA, Mandiri, BRI">
+                                    </div>
+                                </div>
                                 <div class="col-12">
                                     <label class="form-label fw-bold small text-uppercase text-secondary ls-1 font-outfit">Foto Profil / Logo Agensi</label>
                                     <div class="d-flex align-items-center gap-3 mb-3">

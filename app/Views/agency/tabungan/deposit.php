@@ -55,7 +55,7 @@
                 <ul class="list-unstyled mb-0">
                     <?php foreach ($deposits as $d): ?>
                         <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                            <div>
+                            <div class="flex-grow-1">
                                 <span class="small"><?= date('d/m/Y', strtotime($d['payment_date'])) ?></span>
                                 <strong class="d-block">Rp <?= number_format($d['amount'], 0, ',', '.') ?></strong>
                                 <?php if (($d['status'] ?? 'verified') === 'pending'): ?>
@@ -64,9 +64,18 @@
                                     <span class="badge bg-success bg-opacity-10 text-success small">Terverifikasi</span>
                                 <?php endif; ?>
                             </div>
-                            <?php if (!empty($d['proof'])): ?>
-                                <a href="<?= base_url($d['proof']) ?>" target="_blank" class="btn btn-light btn-sm">Bukti</a>
-                            <?php endif; ?>
+                            <div class="d-flex align-items-center gap-2">
+                                <?php if (!empty($d['proof'])): ?>
+                                    <a href="<?= base_url($d['proof']) ?>" target="_blank" class="btn btn-light btn-sm" title="Lihat Bukti Transfer">
+                                        <i class="bi bi-file-earmark-image"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <?php if (($d['status'] ?? 'pending') === 'verified'): ?>
+                                    <a href="<?= base_url('agency/print-documents/deposit-receipt?deposit_id=' . $d['id']) ?>" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill" title="Cetak Bukti Setoran">
+                                        <i class="bi bi-printer-fill"></i>
+                                    </a>
+                                <?php endif; ?>
+                            </div>
                         </li>
                     <?php endforeach; ?>
                 </ul>

@@ -105,10 +105,28 @@
         <div class="value">Rp <?= number_format($commission['amount_final'], 0, ',', '.') ?></div>
     </div>
 
-    <div class="row g-2">
+    <div class="row g-2 mb-2">
         <div class="col-5"><span class="label">Tanggal Penyerahan</span></div>
         <div class="col-7"><span class="value"><?= esc($tanggal_penyerahan) ?></span></div>
     </div>
+    <?php if (!empty($commission['nomor_rekening']) || !empty($commission['nama_bank'])): ?>
+    <div class="row g-2 mb-2">
+        <div class="col-5"><span class="label">Rekening Agency</span></div>
+        <div class="col-7">
+            <span class="value">
+                <?php if (!empty($commission['nomor_rekening'])): ?>
+                    <?= esc($commission['nomor_rekening']) ?>
+                <?php endif; ?>
+                <?php if (!empty($commission['nomor_rekening']) && !empty($commission['nama_bank'])): ?>
+                    <span class="text-muted"> — </span>
+                <?php endif; ?>
+                <?php if (!empty($commission['nama_bank'])): ?>
+                    <?= esc($commission['nama_bank']) ?>
+                <?php endif; ?>
+            </span>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <div class="signature-block">
         <div class="ttd-label">Direktur</div>

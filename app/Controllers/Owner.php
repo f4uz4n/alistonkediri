@@ -607,4 +607,61 @@ class Owner extends BaseController
         $bannerModel->delete($id);
         return redirect()->to('owner/banners')->with('msg', 'Banner berhasil dihapus.');
     }
+
+    /**
+     * Ambil notifikasi untuk navbar: jamaah pending, pembayaran pending, setoran pending.
+     */
+    public function getNotifications()
+    {
+        if (session()->get('role') != 'owner') {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        }
+
+        // Gunakan DB query langsung untuk memastikan tidak ada cache
+        $db = \Config\Database::connect();
+        
+        // Hitung jamaah pending (status != verified dan != cancelled)
+        $pendingParticipants = $db->table('participants')
+            ->where('status !=', 'verified')
+            ->where('status !=', 'cancelled')
+            ->countAllResults();
+        
+        // Hitung pembayaran pending
+        $pendingPayments = $db->table('participant_payments')
+            ->where('status', 'pending')
+            ->countAllResults();
+        
+        // Hitung setoran tabungan pending
+        $pendingDeposits = $db->table('travel_savings_deposits')
+            ->where('status', 'pending')
+            ->countAllResults();
+
+        $total = (int)$pendingParticipants + (int)$pendingPayments + (int)$pendingDeposits;
+
+        $response = [
+            'status' => 'success',
+            'notifications' => [
+                'participants' => [
+                    'count' => (int)$pendingParticipants,
+                    'url' => base_url('owner/participant?status=pending'),
+                    'label' => 'Jamaah Menunggu Verifikasi'
+                ],
+                'payments' => [
+                    'count' => (int)$pendingPayments,
+                    'url' => base_url('owner/payment-verification'),
+                    'label' => 'Pembayaran Menunggu Verifikasi'
+                ],
+                'deposits' => [
+                    'count' => (int)$pendingDeposits,
+                    'url' => base_url('owner/tabungan?tab=verifikasi'),
+                    'label' => 'Setoran Tabungan Menunggu Verifikasi'
+                ],
+                'total' => $total
+            ]
+        ];
+
+        // Set header untuk memastikan response JSON
+        $this->response->setContentType('application/json');
+        return $this->response->setJSON($response);
+    }
 }

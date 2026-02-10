@@ -118,7 +118,7 @@ class Commission extends BaseController
         }
 
         $commission = $this->commissionModel
-            ->select('agency_commissions.*, users.full_name as agency_name, travel_packages.name as package_name, travel_packages.departure_date')
+            ->select('agency_commissions.*, users.full_name as agency_name, users.nomor_rekening, users.nama_bank, travel_packages.name as package_name, travel_packages.departure_date')
             ->join('users', 'users.id = agency_commissions.agency_id')
             ->join('travel_packages', 'travel_packages.id = agency_commissions.package_id')
             ->where('agency_commissions.id', $id)

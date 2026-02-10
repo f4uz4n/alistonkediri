@@ -25,7 +25,7 @@ class AgencyCommissionModel extends Model
 
     public function getSummary()
     {
-        return $this->select('agency_commissions.*, users.full_name as agency_name, travel_packages.name as package_name, travel_packages.departure_date, travel_packages.commission_per_pax as rate')
+        return $this->select('agency_commissions.*, users.full_name as agency_name, users.nomor_rekening, users.nama_bank, travel_packages.name as package_name, travel_packages.departure_date, travel_packages.commission_per_pax as rate')
             ->join('users', 'users.id = agency_commissions.agency_id')
             ->join('travel_packages', 'travel_packages.id = agency_commissions.package_id')
             ->orderBy('travel_packages.departure_date', 'DESC')
@@ -35,7 +35,7 @@ class AgencyCommissionModel extends Model
 
     public function getFilteredCommissions($filters = [])
     {
-        $builder = $this->select('agency_commissions.*, users.full_name as agency_name, travel_packages.name as package_name, travel_packages.departure_date, travel_packages.commission_per_pax as rate')
+        $builder = $this->select('agency_commissions.*, users.full_name as agency_name, users.nomor_rekening, users.nama_bank, travel_packages.name as package_name, travel_packages.departure_date, travel_packages.commission_per_pax as rate')
             ->join('users', 'users.id = agency_commissions.agency_id')
             ->join('travel_packages', 'travel_packages.id = agency_commissions.package_id');
 
@@ -70,7 +70,7 @@ class AgencyCommissionModel extends Model
      */
     public function getPendingByDepartureDate($departure_date)
     {
-        return $this->select('agency_commissions.*, users.full_name as agency_name, travel_packages.name as package_name, travel_packages.departure_date, travel_packages.commission_per_pax as rate')
+        return $this->select('agency_commissions.*, users.full_name as agency_name, users.nomor_rekening, users.nama_bank, travel_packages.name as package_name, travel_packages.departure_date, travel_packages.commission_per_pax as rate')
             ->join('users', 'users.id = agency_commissions.agency_id')
             ->join('travel_packages', 'travel_packages.id = agency_commissions.package_id')
             ->where('travel_packages.departure_date', $departure_date)
@@ -114,7 +114,7 @@ class AgencyCommissionModel extends Model
      */
     public function getCommissionsByDepartureDate($departure_date)
     {
-        return $this->select('agency_commissions.*, users.full_name as agency_name, travel_packages.name as package_name, travel_packages.departure_date, travel_packages.commission_per_pax as rate')
+        return $this->select('agency_commissions.*, users.full_name as agency_name, users.nomor_rekening, users.nama_bank, travel_packages.name as package_name, travel_packages.departure_date, travel_packages.commission_per_pax as rate')
             ->join('users', 'users.id = agency_commissions.agency_id')
             ->join('travel_packages', 'travel_packages.id = agency_commissions.package_id')
             ->where('travel_packages.departure_date', $departure_date)

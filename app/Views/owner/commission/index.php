@@ -299,6 +299,7 @@ document.querySelectorAll('.bulk-check-all').forEach(function(checkbox) {
                                         <th class="py-3 border-0 text-secondary small fw-bold text-uppercase text-center">Tgl. Berangkat</th>
                                         <th class="py-3 border-0 text-secondary small fw-bold text-uppercase text-center">Total Pax</th>
                                         <th class="py-3 border-0 text-secondary small fw-bold text-uppercase text-end">Komisi Final</th>
+                                        <th class="py-3 border-0 text-secondary small fw-bold text-uppercase">Rekening & Bank</th>
                                         <th class="py-3 border-0 text-secondary small fw-bold text-uppercase text-center">Dibayar</th>
                                         <th class="pe-4 py-3 border-0 text-secondary small fw-bold text-uppercase text-end">Aksi</th>
                                     </tr>
@@ -306,7 +307,7 @@ document.querySelectorAll('.bulk-check-all').forEach(function(checkbox) {
                                 <tbody>
                                     <?php if(empty($commissions_paid)): ?>
                                         <tr>
-                                            <td colspan="6" class="text-center py-5">
+                                            <td colspan="7" class="text-center py-5">
                                                 <div class="py-4">
                                                     <i class="bi bi-wallet2 text-muted fs-1 mb-3"></i>
                                                     <p class="text-secondary mb-0">Belum ada komisi yang sudah dibayar.</p>
@@ -327,6 +328,20 @@ document.querySelectorAll('.bulk-check-all').forEach(function(checkbox) {
                                                 <span class="badge bg-primary-soft text-primary rounded-pill px-3"><?= $comm['rate'] > 0 ? round($comm['amount_calculated'] / $comm['rate']) : 0 ?> Pax</span>
                                             </td>
                                             <td class="text-end"><span class="text-dark fw-bold">Rp <?= number_format($comm['amount_final'], 0, ',', '.') ?></span></td>
+                                            <td>
+                                                <?php if (!empty($comm['nomor_rekening']) || !empty($comm['nama_bank'])): ?>
+                                                    <div class="d-flex flex-column gap-1">
+                                                        <?php if (!empty($comm['nomor_rekening'])): ?>
+                                                            <span class="text-dark small fw-bold"><i class="bi bi-bank text-primary me-1"></i> <?= esc($comm['nomor_rekening']) ?></span>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($comm['nama_bank'])): ?>
+                                                            <span class="text-secondary smaller"><i class="bi bi-building me-1"></i> <?= esc($comm['nama_bank']) ?></span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <span class="text-muted small">—</span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="text-center small text-muted"><?= !empty($comm['paid_at']) ? date('d/m/Y H:i', strtotime($comm['paid_at'])) : '—' ?></td>
                                             <td class="pe-4 text-end">
                                                 <a href="<?= base_url('owner/commissions/print/' . $comm['id']) ?>" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold me-1" title="Cetak slip komisi">
@@ -454,12 +469,33 @@ document.querySelectorAll('.bulk-check-all').forEach(function(checkbox) {
                             <textarea name="notes" class="form-control border-0 bg-light" rows="2" placeholder="Contoh: Bonus target tercapai - Rp 500k"><?= esc($comm['notes']) ?></textarea>
                         </div>
 
-                        <div class="mb-0">
+                        <div class="mb-3">
                             <label class="form-label fw-bold small">Status Pembayaran</label>
-                            <select name="status" class="form-select border-0 bg-light" required>
+                            <select name="status" class="form-select border-0 bg-light" required id="statusSelect<?= $comm['id'] ?>" onchange="toggleRekeningInfo(<?= $comm['id'] ?>)">
                                 <option value="pending" <?= $comm['status'] == 'pending' ? 'selected' : '' ?>>Pending (Belum Dibayar)</option>
                                 <option value="paid" <?= $comm['status'] == 'paid' ? 'selected' : '' ?>>Paid (Sudah Dibayar)</option>
                             </select>
+                        </div>
+                        <div id="rekeningInfo<?= $comm['id'] ?>" class="mb-0 p-3 bg-light rounded-3 border" style="display: <?= ($comm['status'] ?? '') === 'paid' ? 'block' : 'none' ?>;">
+                            <label class="form-label fw-bold small mb-2">Informasi Rekening Agency</label>
+                            <?php if (!empty($comm['nomor_rekening']) || !empty($comm['nama_bank'])): ?>
+                                <div class="d-flex flex-column gap-2">
+                                    <?php if (!empty($comm['nomor_rekening'])): ?>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-bank text-primary me-2"></i>
+                                            <span class="small fw-bold">Nomor Rekening: <span class="text-dark"><?= esc($comm['nomor_rekening']) ?></span></span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($comm['nama_bank'])): ?>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-building text-primary me-2"></i>
+                                            <span class="small fw-bold">Bank: <span class="text-dark"><?= esc($comm['nama_bank']) ?></span></span>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php else: ?>
+                                <p class="small text-muted mb-0"><i class="bi bi-info-circle me-1"></i> Agency belum mengisi informasi rekening.</p>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <div class="modal-footer border-0 pt-0">
@@ -473,6 +509,17 @@ document.querySelectorAll('.bulk-check-all').forEach(function(checkbox) {
     <?php endforeach; ?>
 <?php endif; ?>
 
+<script>
+function toggleRekeningInfo(commId) {
+    var select = document.getElementById('statusSelect' + commId);
+    var info = document.getElementById('rekeningInfo' + commId);
+    if (select.value === 'paid') {
+        info.style.display = 'block';
+    } else {
+        info.style.display = 'none';
+    }
+}
+</script>
 <style>
     .bg-primary-soft { background: rgba(13, 110, 253, 0.1); }
     .text-primary { color: #0d6efd !important; }

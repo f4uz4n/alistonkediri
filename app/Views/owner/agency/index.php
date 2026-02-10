@@ -61,6 +61,7 @@
                         <tr>
                             <th class="ps-4 py-3 border-0 text-secondary small fw-bold text-uppercase">Profil Agensi</th>
                             <th class="py-3 border-0 text-secondary small fw-bold text-uppercase">Kontak & Terdaftar</th>
+                            <th class="py-3 border-0 text-secondary small fw-bold text-uppercase">Rekening & Bank</th>
                             <th class="py-3 border-0 text-secondary small fw-bold text-uppercase text-center">Status</th>
                             <th class="pe-4 py-3 border-0 text-secondary small fw-bold text-uppercase text-end">Aksi</th>
                         </tr>
@@ -68,7 +69,7 @@
                     <tbody>
                         <?php if(empty($agencies)): ?>
                             <tr>
-                                <td colspan="4" class="text-center py-5">
+                                <td colspan="5" class="text-center py-5">
                                     <div class="py-4">
                                         <i class="bi bi-people text-muted fs-1 mb-3"></i>
                                         <p class="text-secondary mb-0">Belum ada agensi yang terdaftar.</p>
@@ -98,6 +99,20 @@
                                         <span class="text-dark small fw-bold"><i class="bi bi-whatsapp text-success me-1"></i> <?= esc($agency['phone'] ?: '-') ?></span>
                                         <span class="text-secondary smaller"><i class="bi bi-calendar3 me-1"></i> <?= date('d M Y', strtotime($agency['created_at'])) ?></span>
                                     </div>
+                                </td>
+                                <td>
+                                    <?php if (!empty($agency['nomor_rekening']) || !empty($agency['nama_bank'])): ?>
+                                        <div class="d-flex flex-column gap-1">
+                                            <?php if (!empty($agency['nomor_rekening'])): ?>
+                                                <span class="text-dark small fw-bold"><i class="bi bi-bank text-primary me-1"></i> <?= esc($agency['nomor_rekening']) ?></span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($agency['nama_bank'])): ?>
+                                                <span class="text-secondary smaller"><i class="bi bi-building me-1"></i> <?= esc($agency['nama_bank']) ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="text-muted small">—</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="text-center">
                                     <div class="form-check form-switch d-flex flex-column align-items-center justify-content-center">

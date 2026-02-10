@@ -4,11 +4,31 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use App\Models\UserModel;
+use App\Libraries\JWTService;
+use App\Libraries\RateLimiter;
 
 class Auth extends BaseController
 {
+    protected $jwtService;
+    protected $rateLimiter;
+
+    public function __construct()
+    {
+        $this->jwtService = new JWTService();
+        $this->rateLimiter = new RateLimiter();
+    }
+
     public function login()
     {
+        // Cek jika sudah login via JWT atau session
+        $token = $this->jwtService->getTokenFromRequest();
+        if ($token) {
+            $userData = $this->jwtService->verifyToken($token);
+            if ($userData) {
+                return redirect()->to($userData['role'] == 'owner' ? 'owner' : 'agency');
+            }
+        }
+
         if (session()->get('isLoggedIn')) {
             return redirect()->to(session()->get('role') == 'owner' ? 'owner' : 'agency');
         }
@@ -19,43 +39,138 @@ class Auth extends BaseController
     {
         $session = session();
         $model = new UserModel();
-        $username = $this->request->getVar('username');
-        $password = $this->request->getVar('password');
+        
+        // Sanitize input untuk mencegah XSS
+        $username = esc($this->request->getPost('username'));
+        $password = $this->request->getPost('password');
 
-        // Simple validation rule
-        if(!$this->validate([
-            'username' => 'required',
-            'password' => 'required'
-        ])) {
-            return view('auth/login', ['validation' => $this->validator]);
+        // Validasi input
+        $validation = \Config\Services::validation();
+        if (!$validation->run([
+            'username' => $username,
+            'password' => $password
+        ], 'login')) {
+            return view('auth/login', ['validation' => $validation]);
         }
 
+        // Rate limiting - cek berdasarkan IP dan username
+        $clientIP = $this->request->getIPAddress();
+        $identifier = $clientIP . '_' . $username;
+
+        if (!$this->rateLimiter->isAllowed($identifier)) {
+            $remainingTime = $this->rateLimiter->getRemainingTime($identifier);
+            $minutes = ceil($remainingTime / 60);
+            $session->setFlashdata('error', "Terlalu banyak percobaan login. Silakan coba lagi dalam {$minutes} menit.");
+            return redirect()->to('login');
+        }
+
+        // Query menggunakan Query Builder (aman dari SQL injection)
         $user = $model->where('username', $username)->first();
 
         if ($user) {
-            $pass = $user['password'];
-            if (password_verify($password, $pass)) {
+            // Verify password menggunakan password_verify (aman dari timing attack)
+            if (password_verify($password, $user['password'])) {
+                // Cek apakah user aktif
+                if (isset($user['is_active']) && $user['is_active'] == 0) {
+                    $session->setFlashdata('error', 'Akun Anda telah dinonaktifkan.');
+                    return redirect()->to('login');
+                }
+
+                // Reset rate limiting setelah login berhasil
+                $this->rateLimiter->resetAttempts($identifier);
+
+                // Generate JWT token
+                $token = $this->jwtService->generateToken([
+                    'id' => $user['id'],
+                    'username' => $user['username'],
+                    'role' => $user['role']
+                ]);
+
+                // Set session data (untuk kompatibilitas)
                 $ses_data = [
                     'id'       => $user['id'],
                     'username' => $user['username'],
                     'role'     => $user['role'],
-                    'isLoggedIn' => TRUE
+                    'isLoggedIn' => TRUE,
+                    'jwt_token' => $token
                 ];
                 $session->set($ses_data);
-                return redirect()->to($user['role'] == 'owner' ? 'owner' : 'agency');
+
+                // Set JWT token di cookie (HttpOnly untuk keamanan)
+                $response = redirect()->to($user['role'] == 'owner' ? 'owner' : 'agency');
+                $response->setCookie('jwt_token', $token, [
+                    'expires' => time() + 86400, // 24 jam
+                    'httponly' => true,
+                    'secure' => isset($_SERVER['HTTPS']), // Hanya kirim via HTTPS jika tersedia
+                    'samesite' => 'Lax'
+                ]);
+
+                return $response;
             } else {
-                $session->setFlashdata('msg', 'Password Salah');
+                // Record failed attempt
+                $this->rateLimiter->recordFailedAttempt($identifier);
+                $remaining = $this->rateLimiter->getRemainingAttempts($identifier);
+                
+                $session->setFlashdata('error', "Password salah. Sisa percobaan: {$remaining}");
                 return redirect()->to('login');
             }
         } else {
-            $session->setFlashdata('msg', 'Username Tidak Ditemukan');
+            // Record failed attempt (jangan reveal bahwa username tidak ada)
+            $this->rateLimiter->recordFailedAttempt($identifier);
+            $remaining = $this->rateLimiter->getRemainingAttempts($identifier);
+            
+            $session->setFlashdata('error', "Username atau password salah. Sisa percobaan: {$remaining}");
             return redirect()->to('login');
         }
     }
 
     public function logout()
     {
-        session()->destroy();
-        return redirect()->to('login');
+        $session = session();
+        
+        // Hapus JWT token dari cookie
+        $response = redirect()->to('login');
+        $response->deleteCookie('jwt_token');
+        
+        // Destroy session
+        $session->destroy();
+        
+        return $response;
+    }
+
+    /**
+     * Refresh JWT token
+     */
+    public function refreshToken()
+    {
+        $token = $this->jwtService->getTokenFromRequest();
+        if (!$token) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Token tidak ditemukan'
+            ])->setStatusCode(401);
+        }
+
+        $newToken = $this->jwtService->refreshToken($token);
+        if ($newToken) {
+            // Update token di session dan cookie
+            session()->set('jwt_token', $newToken);
+            $response = $this->response->setJSON([
+                'success' => true,
+                'token' => $newToken
+            ]);
+            $response->setCookie('jwt_token', $newToken, [
+                'expires' => time() + 86400,
+                'httponly' => true,
+                'secure' => isset($_SERVER['HTTPS']),
+                'samesite' => 'Lax'
+            ]);
+            return $response;
+        }
+
+        return $this->response->setJSON([
+            'success' => false,
+            'message' => 'Token tidak valid'
+        ])->setStatusCode(401);
     }
 }

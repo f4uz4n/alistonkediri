@@ -12,10 +12,12 @@ $routes->get('testimoni-jamaah', 'Home::testimoni');
 $routes->post('testimoni-jamaah/submit', 'Home::submitTestimoni');
 $routes->get('login', 'Auth::login');
 $routes->post('auth/login', 'Auth::attemptLogin');
+$routes->post('auth/refresh-token', 'Auth::refreshToken');
 $routes->get('logout', 'Auth::logout');
 
 $routes->group('owner', ['filter' => 'auth:owner'], function ($routes) {
     $routes->get('/', 'Owner::index');
+    $routes->get('notifications', 'Owner::getNotifications');
 
     // Materials Management (Promotion Materials)
     $routes->group('materials', function ($routes) {
@@ -147,6 +149,11 @@ $routes->group('owner', ['filter' => 'auth:owner'], function ($routes) {
         $routes->get('banners', 'Owner::banners');
         $routes->post('banners/store', 'Owner::storeBanner');
         $routes->get('banners/delete/(:num)', 'Owner::deleteBanner/$1');
+
+        // Print Documents
+        $routes->get('print-documents', 'PrintDocuments::index');
+        $routes->get('print-documents/leave-letter', 'PrintDocuments::printLeaveLetter');
+        $routes->get('print-documents/deposit-receipt', 'PrintDocuments::printDepositReceipt');
     });
 
 $routes->group('package', ['filter' => 'auth:owner'], function ($routes) {
@@ -171,11 +178,16 @@ $routes->group('agency', ['filter' => 'auth:agency'], function ($routes) {
 
     // Participant Management (Edit & List)
     $routes->get('participants', 'Agency::participants');
+    $routes->get('boarding', 'Agency::boardingList');
+    $routes->get('cancellations', 'Agency::cancellations');
     $routes->get('tabungan', 'Agency::tabunganIndex');
     $routes->get('tabungan/create', 'Agency::tabunganCreate');
     $routes->post('tabungan/store', 'Agency::tabunganStore');
     $routes->get('tabungan/deposit/(:num)', 'Agency::tabunganDeposit/$1');
     $routes->post('tabungan/store-deposit', 'Agency::tabunganStoreDeposit');
+    
+    // Print Documents untuk Agency
+    $routes->get('print-documents/deposit-receipt', 'PrintDocuments::printDepositReceipt');
     $routes->get('edit-participant/(:num)', 'Agency::editParticipant/$1');
     $routes->post('update-participant/(:num)', 'Agency::updateParticipant/$1');
     $routes->get('registration-form/(:num)', 'Agency::registrationFormPrint/$1');

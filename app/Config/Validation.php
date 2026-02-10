@@ -41,4 +41,25 @@ class Validation extends BaseConfig
     // --------------------------------------------------------------------
     // Rules
     // --------------------------------------------------------------------
+
+    /**
+     * Custom validation rules untuk login
+     */
+    public array $login = [
+        'username' => [
+            'rules' => 'required|min_length[3]|max_length[50]',
+            'errors' => [
+                'required' => 'Username harus diisi',
+                'min_length' => 'Username minimal 3 karakter',
+                'max_length' => 'Username maksimal 50 karakter'
+            ]
+        ],
+        'password' => [
+            'rules' => 'required|min_length[6]',
+            'errors' => [
+                'required' => 'Password harus diisi',
+                'min_length' => 'Password minimal 6 karakter'
+            ]
+        ]
+    ];
 }
