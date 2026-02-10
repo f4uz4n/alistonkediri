@@ -4,18 +4,21 @@ namespace App\Controllers;
 
 use App\Models\HotelModel;
 use App\Models\RoomModel;
+use App\Models\RoomBedModel;
 use App\Models\CityModel;
 
 class Hotel extends BaseController
 {
     protected $hotelModel;
     protected $roomModel;
+    protected $roomBedModel;
     protected $cityModel;
 
     public function __construct()
     {
         $this->hotelModel = new HotelModel();
         $this->roomModel = new RoomModel();
+        $this->roomBedModel = new RoomBedModel();
         $this->cityModel = new CityModel();
     }
 
@@ -268,9 +271,12 @@ class Hotel extends BaseController
             return redirect()->to('owner/hotels')->with('error', 'Hotel tidak ditemukan.');
         }
 
+        $beds = $this->roomBedModel->getByRoom($id);
+
         $data = [
             'room' => $room,
             'hotel' => $hotel,
+            'beds' => $beds,
             'title' => 'Edit Kamar: ' . $room['name'],
         ];
         return view('owner/hotel/room_edit', $data);
@@ -323,5 +329,61 @@ class Hotel extends BaseController
 
         $this->roomModel->delete($id);
         return redirect()->back()->with('msg', 'Kamar berhasil dihapus.');
+    }
+
+    public function storeBed()
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+
+        $roomId = (int) $this->request->getPost('room_id');
+        $room = $this->roomModel->find($roomId);
+        if (!$room) {
+            return redirect()->back()->with('error', 'Kamar tidak ditemukan.');
+        }
+
+        $data = [
+            'room_id' => $roomId,
+            'name' => $this->request->getPost('name'),
+            'price' => (float) $this->request->getPost('price'),
+        ];
+
+        if ($this->roomBedModel->insert($data)) {
+            return redirect()->back()->with('msg', 'Master bed/kasur berhasil ditambahkan.');
+        }
+        return redirect()->back()->withInput()->with('error', 'Gagal menambahkan bed.');
+    }
+
+    public function updateBed($id)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+
+        $bed = $this->roomBedModel->find($id);
+        if (!$bed) {
+            return redirect()->back()->with('error', 'Bed tidak ditemukan.');
+        }
+
+        $data = [
+            'name' => $this->request->getPost('name'),
+            'price' => (float) $this->request->getPost('price'),
+        ];
+
+        if ($this->roomBedModel->update($id, $data)) {
+            return redirect()->back()->with('msg', 'Bed berhasil diperbarui.');
+        }
+        return redirect()->back()->withInput()->with('error', 'Gagal memperbarui bed.');
+    }
+
+    public function deleteBed($id)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+
+        $this->roomBedModel->delete($id);
+        return redirect()->back()->with('msg', 'Bed berhasil dihapus.');
     }
 }

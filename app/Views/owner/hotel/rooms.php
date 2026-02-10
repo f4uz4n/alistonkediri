@@ -47,7 +47,7 @@
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label small mb-0">Harga/Pax (Rp)</label>
-                                    <input type="number" name="room_price[]" class="form-control form-control-sm bg-white border-0" min="0" step="0.01" placeholder="0">
+                                    <input type="text" name="room_price[]" class="form-control form-control-sm bg-white border-0 format-rupiah" placeholder="0" data-value="0">
                                 </div>
                             </div>
                             <div class="mb-2">
@@ -162,10 +162,10 @@
                         '<option value="Quad">Quad</option><option value="Triple">Triple</option><option value="Double">Double</option>' +
                     '</select>' +
                 '</div>' +
-                '<div class="col-6">' +
-                    '<label class="form-label small mb-0">Harga/Pax (Rp)</label>' +
-                    '<input type="number" name="room_price[]" class="form-control form-control-sm bg-white border-0" min="0" step="0.01" placeholder="0">' +
-                '</div>' +
+'<div class="col-6">' +
+                '<label class="form-label small mb-0">Harga/Pax (Rp)</label>' +
+                '<input type="text" name="room_price[]" class="form-control form-control-sm bg-white border-0 format-rupiah" placeholder="0" data-value="0">' +
+            '</div>' +
             '</div>' +
             '<div class="mb-2">' +
                 '<label class="form-label small mb-0">Fasilitas</label>' +

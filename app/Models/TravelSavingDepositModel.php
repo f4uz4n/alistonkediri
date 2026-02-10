@@ -29,4 +29,29 @@ class TravelSavingDepositModel extends Model
             ->first();
         return (float)($r['amount'] ?? 0);
     }
+
+    /**
+     * Semua setoran pending (dari agency) beserta data tabungan dan nama agensi.
+     */
+    public function getPendingWithSavingAndAgency()
+    {
+        return $this->select('travel_savings_deposits.*, travel_savings.name as saving_name, travel_savings.nik as saving_nik, travel_savings.agency_id, users.full_name as agency_name')
+            ->join('travel_savings', 'travel_savings.id = travel_savings_deposits.travel_saving_id')
+            ->join('users', 'users.id = travel_savings.agency_id')
+            ->where('travel_savings_deposits.status', 'pending')
+            ->orderBy('travel_savings_deposits.created_at', 'DESC')
+            ->findAll();
+    }
+
+    /**
+     * Hitung setoran per agency: pending dan verified.
+     */
+    public function getCountsByAgency($agencyId)
+    {
+        $builder = $this->join('travel_savings', 'travel_savings.id = travel_savings_deposits.travel_saving_id')
+            ->where('travel_savings.agency_id', $agencyId);
+        $pending = (clone $builder)->where('travel_savings_deposits.status', 'pending')->countAllResults();
+        $verified = (clone $builder)->where('travel_savings_deposits.status', 'verified')->countAllResults();
+        return ['pending' => $pending, 'verified' => $verified];
+    }
 }

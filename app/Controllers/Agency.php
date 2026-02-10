@@ -22,6 +22,10 @@ class Agency extends BaseController
         $commissionModel = new \App\Models\AgencyCommissionModel();
         $totalIncome = $commissionModel->getTotalPaidCommissionForAgency($agencyId);
 
+        // Verifikasi setoran tabungan: sudah diverifikasi vs belum (pending)
+        $depositModel = new \App\Models\TravelSavingDepositModel();
+        $depositCounts = $depositModel->getCountsByAgency($agencyId);
+
         // Recent Verified Jamaah
         $recentParticipants = $participantModel->select('participants.*, travel_packages.name as package_name')
             ->join('travel_packages', 'travel_packages.id = participants.package_id')
@@ -35,7 +39,9 @@ class Agency extends BaseController
             'stats' => [
                 'total_jamaah' => $totalJamaah,
                 'verified_jamaah' => $verifiedJamaah,
-                'total_income' => $totalIncome
+                'total_income' => $totalIncome,
+                'setoran_verified' => $depositCounts['verified'],
+                'setoran_pending' => $depositCounts['pending'],
             ],
             'recent_participants' => $recentParticipants
         ];
@@ -63,16 +69,18 @@ class Agency extends BaseController
             'package_id' => $this->request->getGet('package_id'),
         ];
 
-        $commissions = $commissionModel->getPaidCommissionsForAgency($agencyId, $filters);
+        $commissions = $commissionModel->getCommissionsForAgency($agencyId, $filters);
         $total_income = $commissionModel->getTotalPaidCommissionForAgency($agencyId, $filters);
+        $total_pending = $commissionModel->getTotalPendingCommissionForAgency($agencyId, $filters);
 
         $packages = $packageModel->select('id, name')->orderBy('name')->findAll();
 
         $data = [
-            'commissions'  => $commissions,
-            'total_income' => $total_income,
-            'packages'     => $packages,
-            'filters'      => $filters,
+            'commissions'   => $commissions,
+            'total_income'  => $total_income,
+            'total_pending' => $total_pending,
+            'packages'      => $packages,
+            'filters'       => $filters,
         ];
 
         return view('agency/income', $data);
@@ -175,6 +183,129 @@ class Agency extends BaseController
             'agency_id' => session()->get('id'),
         ]);
         return redirect()->to('agency/testimoni')->with('msg', 'Testimoni berhasil dikirim. Akan dipublikasikan setelah diverifikasi admin.');
+    }
+
+    /**
+     * Tabungan Jamaah: daftar tabungan milik agensi ini.
+     */
+    public function tabunganIndex()
+    {
+        $savingModel = new \App\Models\TravelSavingModel();
+        $agencyId = session()->get('id');
+        $status = $this->request->getGet('status');
+        $cari = trim((string) $this->request->getGet('cari'));
+        $builder = $savingModel->getByAgency($agencyId);
+        if ($status !== null && $status !== '') {
+            $builder->where('status', $status);
+        }
+        if ($cari !== '') {
+            $builder->groupStart()
+                ->like('nik', $cari)
+                ->orLike('name', $cari)
+                ->groupEnd();
+        }
+        $savings = $builder->findAll();
+        $data = ['savings' => $savings, 'filterStatus' => $status, 'filterCari' => $cari];
+        return view('agency/tabungan/index', $data);
+    }
+
+    /**
+     * Form tambah jamaah tabungan (agency_id = session).
+     */
+    public function tabunganCreate()
+    {
+        return view('agency/tabungan/create');
+    }
+
+    /**
+     * Simpan jamaah tabungan baru.
+     */
+    public function tabunganStore()
+    {
+        $rules = [
+            'name' => 'required|min_length[3]',
+            'nik' => 'required|min_length[16]|max_length[20]',
+            'phone' => 'permit_empty',
+        ];
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+        $savingModel = new \App\Models\TravelSavingModel();
+        $data = [
+            'agency_id' => session()->get('id'),
+            'name' => $this->request->getPost('name'),
+            'nik' => $this->request->getPost('nik'),
+            'phone' => $this->request->getPost('phone') ?: null,
+            'total_balance' => 0,
+            'status' => 'menabung',
+            'notes' => $this->request->getPost('notes') ?: null,
+        ];
+        if ($savingModel->insert($data)) {
+            return redirect()->to('agency/tabungan')->with('msg', 'Jamaah tabungan berhasil didaftarkan.');
+        }
+        return redirect()->back()->withInput()->with('error', 'Gagal menyimpan data.');
+    }
+
+    /**
+     * Form tambah setoran (transfer). Setoran dari agency status = pending sampai diverifikasi admin.
+     */
+    public function tabunganDeposit($id)
+    {
+        $savingModel = new \App\Models\TravelSavingModel();
+        $depositModel = new \App\Models\TravelSavingDepositModel();
+        $saving = $savingModel->find($id);
+        $agencyId = session()->get('id');
+        if (!$saving || (int) $saving['agency_id'] !== (int) $agencyId || $saving['status'] !== 'menabung') {
+            return redirect()->to('agency/tabungan')->with('error', 'Data tabungan tidak ditemukan atau sudah diklaim.');
+        }
+        $deposits = $depositModel->getBySaving($id);
+        $data = ['saving' => $saving, 'deposits' => $deposits];
+        return view('agency/tabungan/deposit', $data);
+    }
+
+    /**
+     * Simpan setoran dari agency: status pending, wajib upload bukti transfer.
+     */
+    public function tabunganStoreDeposit()
+    {
+        $savingModel = new \App\Models\TravelSavingModel();
+        $depositModel = new \App\Models\TravelSavingDepositModel();
+        $travelSavingId = (int) $this->request->getPost('travel_saving_id');
+        $saving = $savingModel->find($travelSavingId);
+        $agencyId = session()->get('id');
+        if (!$saving || (int) $saving['agency_id'] !== (int) $agencyId || $saving['status'] !== 'menabung') {
+            return redirect()->to('agency/tabungan')->with('error', 'Data tabungan tidak ditemukan atau sudah diklaim.');
+        }
+        $rules = [
+            'amount' => 'required|decimal|greater_than[0]',
+            'payment_date' => 'required|valid_date',
+        ];
+        if ($this->request->getFile('proof')->isValid()) {
+            $rules['proof'] = 'uploaded[proof]|max_size[proof,5120]|mime_in[proof,image/jpeg,image/png,image/webp,application/pdf]';
+        }
+        if (!$this->validate($rules)) {
+            return redirect()->to("agency/tabungan/deposit/{$travelSavingId}")->withInput()->with('errors', $this->validator->getErrors());
+        }
+        $amount = (float) str_replace(',', '', $this->request->getPost('amount'));
+        $file = $this->request->getFile('proof');
+        $proof = null;
+        if ($file && $file->isValid() && !$file->hasMoved()) {
+            $dir = FCPATH . 'uploads/tabungan';
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            $proof = 'uploads/tabungan/' . $file->getRandomName();
+            $file->move($dir, basename($proof));
+        }
+        $depositModel->insert([
+            'travel_saving_id' => $travelSavingId,
+            'amount' => $amount,
+            'payment_date' => $this->request->getPost('payment_date'),
+            'proof' => $proof,
+            'status' => 'pending',
+            'notes' => $this->request->getPost('notes') ?: null,
+        ]);
+        return redirect()->to("agency/tabungan/deposit/{$travelSavingId}")->with('msg', 'Setoran berhasil dikirim. Menunggu verifikasi admin untuk masuk ke saldo.');
     }
 
     public function team()
@@ -347,18 +478,15 @@ class Agency extends BaseController
             'kabupaten' => 'required',
             'provinsi' => 'required',
         ];
-
-        $hasPassport = (int) $this->request->getPost('has_passport') === 1;
-        if ($hasPassport) {
-            $rules['passport_number'] = 'required|min_length[5]';
-            $rules['passport_full_name'] = 'required|min_length[3]';
-            $rules['passport_issuance_date'] = 'required|valid_date';
-            $rules['passport_expiry_date'] = 'required|valid_date';
-        }
+        // Data paspor bersifat opsional; tidak ada validasi wajib untuk paspor.
 
         if (!$this->validate($rules)) {
-            return redirect()->back()->withInput()->with('error', 'Mohon lengkapi seluruh biodata wajib sesuai KTP.' . ($hasPassport ? ' Dan data paspor wajib diisi.' : ''));
+            return redirect()->back()->withInput()->with('error', 'Mohon lengkapi seluruh biodata wajib sesuai KTP.');
         }
+
+        $passportNumber = trim($this->request->getPost('passport_number') ?? '');
+        $passportFullName = trim($this->request->getPost('passport_full_name') ?? '');
+        $hasPassport = $passportNumber !== '' || $passportFullName !== '';
 
         $db = \Config\Database::connect();
         $db->transStart();
@@ -390,19 +518,16 @@ class Agency extends BaseController
             'status' => 'pending',
             'has_passport' => $hasPassport ? 1 : 0,
         ];
-
-        if ($hasPassport) {
-            $participantData['passport_number'] = $this->request->getPost('passport_number');
-            $participantData['passport_type'] = $this->request->getPost('passport_type');
-            $participantData['passport_full_name'] = $this->request->getPost('passport_full_name');
-            $participantData['passport_place_of_birth'] = $this->request->getPost('passport_place_of_birth');
-            $participantData['passport_issuance_date'] = $this->request->getPost('passport_issuance_date');
-            $participantData['passport_expiry_date'] = $this->request->getPost('passport_expiry_date');
-            $participantData['passport_issuance_city'] = $this->request->getPost('passport_issuance_city');
-            $participantData['passport_reg_number'] = $this->request->getPost('passport_reg_number');
-            $participantData['passport_issuing_office'] = $this->request->getPost('passport_issuing_office');
-            $participantData['passport_name_idn'] = $this->request->getPost('passport_name_idn');
-        }
+        $participantData['passport_number'] = $hasPassport ? ($this->request->getPost('passport_number') ?? null) : null;
+        $participantData['passport_type'] = $hasPassport ? ($this->request->getPost('passport_type') ?: null) : null;
+        $participantData['passport_full_name'] = $hasPassport ? ($this->request->getPost('passport_full_name') ?? null) : null;
+        $participantData['passport_place_of_birth'] = $hasPassport ? ($this->request->getPost('passport_place_of_birth') ?: null) : null;
+        $participantData['passport_issuance_date'] = $hasPassport ? ($this->request->getPost('passport_issuance_date') ?: null) : null;
+        $participantData['passport_expiry_date'] = $hasPassport ? ($this->request->getPost('passport_expiry_date') ?: null) : null;
+        $participantData['passport_issuance_city'] = $hasPassport ? ($this->request->getPost('passport_issuance_city') ?: null) : null;
+        $participantData['passport_reg_number'] = $hasPassport ? ($this->request->getPost('passport_reg_number') ?: null) : null;
+        $participantData['passport_issuing_office'] = $hasPassport ? ($this->request->getPost('passport_issuing_office') ?: null) : null;
+        $participantData['passport_name_idn'] = $hasPassport ? ($this->request->getPost('passport_name_idn') ?: null) : null;
 
         $participantId = $participantModel->insert($participantData);
 
@@ -673,18 +798,15 @@ class Agency extends BaseController
             'emergency_relationship' => 'required|min_length[2]',
             'emergency_phone' => 'required|min_length[8]',
         ];
-
-        $hasPassport = (int) $this->request->getPost('has_passport') === 1;
-        if ($hasPassport) {
-            $rules['passport_number'] = 'required|min_length[5]';
-            $rules['passport_full_name'] = 'required|min_length[3]';
-            $rules['passport_issuance_date'] = 'required|valid_date';
-            $rules['passport_expiry_date'] = 'required|valid_date';
-        }
+        // Data paspor bersifat opsional.
 
         if (!$this->validate($rules)) {
-            return redirect()->back()->withInput()->with('error', 'Mohon lengkapi data wajib dengan benar.' . ($hasPassport ? ' Data paspor wajib diisi.' : ''));
+            return redirect()->back()->withInput()->with('error', 'Mohon lengkapi data wajib dengan benar.');
         }
+
+        $passportNumber = trim($this->request->getPost('passport_number') ?? '');
+        $passportFullName = trim($this->request->getPost('passport_full_name') ?? '');
+        $hasPassport = $passportNumber !== '' || $passportFullName !== '';
 
         $participantData = [
             'nik' => $this->request->getPost('nik'),
@@ -708,32 +830,17 @@ class Agency extends BaseController
             'emergency_phone' => $this->request->getPost('emergency_phone'),
             'has_passport' => $hasPassport ? 1 : 0,
         ];
-
-        if ($hasPassport) {
-            $participantData['nationality'] = $this->request->getPost('passport_nationality') ?: 'Indonesian';
-            $participantData['passport_number'] = $this->request->getPost('passport_number');
-            $participantData['passport_type'] = $this->request->getPost('passport_type');
-            $participantData['passport_full_name'] = $this->request->getPost('passport_full_name');
-            $participantData['passport_place_of_birth'] = $this->request->getPost('passport_place_of_birth');
-            $participantData['passport_issuance_date'] = $this->request->getPost('passport_issuance_date');
-            $participantData['passport_expiry_date'] = $this->request->getPost('passport_expiry_date');
-            $participantData['passport_issuance_city'] = $this->request->getPost('passport_issuance_city');
-            $participantData['passport_reg_number'] = $this->request->getPost('passport_reg_number');
-            $participantData['passport_issuing_office'] = $this->request->getPost('passport_issuing_office');
-            $participantData['passport_name_idn'] = $this->request->getPost('passport_name_idn');
-        } else {
-            $participantData['nationality'] = $this->request->getPost('nationality') ?? 'WNI';
-            $participantData['passport_number'] = null;
-            $participantData['passport_type'] = null;
-            $participantData['passport_full_name'] = null;
-            $participantData['passport_place_of_birth'] = null;
-            $participantData['passport_issuance_date'] = null;
-            $participantData['passport_expiry_date'] = null;
-            $participantData['passport_issuance_city'] = null;
-            $participantData['passport_reg_number'] = null;
-            $participantData['passport_issuing_office'] = null;
-            $participantData['passport_name_idn'] = null;
-        }
+        $participantData['nationality'] = $hasPassport ? ($this->request->getPost('passport_nationality') ?: 'Indonesian') : ($this->request->getPost('nationality') ?? $participant['nationality'] ?? 'WNI');
+        $participantData['passport_number'] = $hasPassport ? ($this->request->getPost('passport_number') ?? null) : null;
+        $participantData['passport_type'] = $hasPassport ? ($this->request->getPost('passport_type') ?: null) : null;
+        $participantData['passport_full_name'] = $hasPassport ? ($this->request->getPost('passport_full_name') ?? null) : null;
+        $participantData['passport_place_of_birth'] = $hasPassport ? ($this->request->getPost('passport_place_of_birth') ?: null) : null;
+        $participantData['passport_issuance_date'] = $hasPassport ? ($this->request->getPost('passport_issuance_date') ?: null) : null;
+        $participantData['passport_expiry_date'] = $hasPassport ? ($this->request->getPost('passport_expiry_date') ?: null) : null;
+        $participantData['passport_issuance_city'] = $hasPassport ? ($this->request->getPost('passport_issuance_city') ?: null) : null;
+        $participantData['passport_reg_number'] = $hasPassport ? ($this->request->getPost('passport_reg_number') ?: null) : null;
+        $participantData['passport_issuing_office'] = $hasPassport ? ($this->request->getPost('passport_issuing_office') ?: null) : null;
+        $participantData['passport_name_idn'] = $hasPassport ? ($this->request->getPost('passport_name_idn') ?: null) : null;
 
         $db = \Config\Database::connect();
         $db->transStart();
@@ -922,25 +1029,30 @@ class Agency extends BaseController
         $docModel = new \App\Models\DocumentModel();
         $uploadedCount = 0;
 
-        $allowedTypes = ['passport', 'id_card', 'vaccine', 'other'];
+        // Semua jenis dari form; untuk DB hanya passport, id_card, vaccine, other (sisanya simpan sebagai other + label di title)
+        $typeLabels = [
+            'passport' => 'Paspor', 'id_card' => 'KTP', 'vaccine' => 'Kartu Vaksin',
+            'visa' => 'Visa', 'vaccine_meningitis' => 'Vaksin Meningitis', 'vaccine_covid' => 'Vaksin Covid',
+            'insurance' => 'Asuransi', 'ticket' => 'Tiket', 'photo' => 'Pas Foto 4x6', 'other' => 'Lainnya',
+        ];
+        $singleTypes = ['passport', 'id_card', 'vaccine'];
+
         foreach ($files as $index => $file) {
             if ($file->isValid() && !$file->hasMoved()) {
-                $type = $types[$index] ?? 'other';
-                if (!in_array($type, $allowedTypes)) {
-                    $type = 'other';
-                }
-                $title = is_array($titles) ? ($titles[$index] ?? '') : '';
+                $rawType = isset($types[$index]) ? $types[$index] : 'other';
+                $dbType = in_array($rawType, $singleTypes, true) ? $rawType : 'other';
+                $label = isset($titles[$index]) && trim($titles[$index]) !== '' ? trim($titles[$index]) : ($typeLabels[$rawType] ?? $rawType);
                 $newName = $file->getRandomName();
                 $file->move(ROOTPATH . 'public/uploads/documents', $newName);
 
-                if ($type !== 'other') {
-                    $docModel->where('participant_id', $participantId)->where('type', $type)->delete();
+                if (in_array($dbType, $singleTypes, true)) {
+                    $docModel->where('participant_id', $participantId)->where('type', $dbType)->delete();
                 }
 
-                $docModel->save([
+                $docModel->insert([
                     'participant_id' => $participantId,
-                    'type' => $type,
-                    'title' => $title,
+                    'type' => $dbType,
+                    'title' => $label,
                     'file_path' => 'uploads/documents/' . $newName,
                     'is_verified' => 0,
                 ]);

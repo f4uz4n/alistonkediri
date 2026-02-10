@@ -92,21 +92,9 @@
                     <h5 class="fw-bold mb-0"><i class="bi bi-passport me-2"></i>Data Paspor</h5>
                 </div>
                 <div class="card-body p-4 p-md-5">
-                    <div class="mb-4">
-                        <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Sudah punya paspor?</label>
-                        <div class="d-flex gap-4">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="has_passport" id="hasPassportYes" value="1">
-                                <label class="form-check-label fw-bold" for="hasPassportYes">Ya, sudah punya</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="has_passport" id="hasPassportNo" value="0" checked>
-                                <label class="form-check-label fw-bold" for="hasPassportNo">Belum</label>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="passportFields" class="row g-4" style="display: none;">
-                        <div class="col-12"><hr class="my-2"><p class="small text-secondary mb-3">Isi data sesuai paspor</p></div>
+                    <p class="small text-secondary mb-3">Semua isian di bawah bersifat <strong>opsional</strong>. Isi jika jamaah sudah memiliki paspor.</p>
+                    <div class="row g-4">
+                        <div class="col-12"><hr class="my-2"></div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Jenis / Type Paspor</label>
                             <select name="passport_type" class="form-select form-select-lg bg-light border-0 rounded-3">
@@ -156,7 +144,7 @@
                             <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Kota / Tempat Pengeluaran</label>
                             <input type="text" name="passport_issuance_city" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="Kota pengeluaran paspor">
                         </div>
-                    </div>
+                </div>
                 </div>
             </div>
 
@@ -261,16 +249,4 @@
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    var yes = document.getElementById('hasPassportYes');
-    var no = document.getElementById('hasPassportNo');
-    var block = document.getElementById('passportFields');
-    function toggle() {
-        block.style.display = yes.checked ? 'flex' : 'none';
-    }
-    yes.addEventListener('change', toggle);
-    no.addEventListener('change', toggle);
-});
-</script>
 <?= $this->endSection() ?>

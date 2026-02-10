@@ -320,7 +320,7 @@
                 </li>
                 <li class="nav-item">
                     <a href="<?= base_url('owner/tabungan') ?>" class="nav-link <?= strpos(current_url(), 'owner/tabungan') !== false ? 'active' : '' ?>">
-                        <i class="bi bi-cash-coin"></i>
+                        <i class="bi bi-safe2"></i>
                         <span>Tabungan Perjalanan</span>
                     </a>
                 </li>
@@ -410,6 +410,12 @@
                     <a href="<?= base_url('agency/participants') ?>" class="nav-link <?= strpos(current_url(), 'participants') !== false ? 'active' : '' ?>">
                         <i class="bi bi-people-fill"></i>
                         <span>Daftar Jamaah</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= base_url('agency/tabungan') ?>" class="nav-link <?= strpos(current_url(), 'agency/tabungan') !== false ? 'active' : '' ?>">
+                        <i class="bi bi-safe2"></i>
+                        <span>Tabungan Jamaah</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -511,6 +517,47 @@
     <?php endif; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Format Rupiah: input dengan class .format-rupiah tampil format Indonesia (1.500.000), submit nilai angka -->
+    <script>
+    (function() {
+        function formatRupiahInput(el) {
+            var v = (el.value || '').replace(/\D/g, '');
+            if (v === '') { el.value = ''; el.dataset.value = '0'; return; }
+            el.dataset.value = v;
+            var n = parseInt(v, 10);
+            if (isNaN(n)) n = 0;
+            el.value = n.toLocaleString('id-ID', { maximumFractionDigits: 0 });
+        }
+        function initFormatRupiah() {
+            document.querySelectorAll('.format-rupiah').forEach(function(el) {
+                if (el.dataset.rupiahInit) return;
+                el.dataset.rupiahInit = '1';
+                if (el.value && /^\d+$/.test(el.value.replace(/\D/g, ''))) {
+                    el.dataset.value = el.value.replace(/\D/g, '');
+                    formatRupiahInput(el);
+                } else if (el.dataset.value !== undefined) {
+                    el.value = (parseInt(el.dataset.value, 10) || 0).toLocaleString('id-ID', { maximumFractionDigits: 0 });
+                }
+            });
+        }
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('format-rupiah')) formatRupiahInput(e.target);
+        }, true);
+        document.addEventListener('blur', function(e) {
+            if (e.target.classList.contains('format-rupiah')) formatRupiahInput(e.target);
+        }, true);
+        document.addEventListener('submit', function(e) {
+            var form = e.target;
+            if (form.tagName === 'FORM') {
+                form.querySelectorAll('.format-rupiah').forEach(function(el) {
+                    el.value = el.dataset.value !== undefined && el.dataset.value !== '' ? el.dataset.value : (el.value || '').replace(/\D/g, '') || '0';
+                });
+            }
+        }, true);
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initFormatRupiah);
+        else initFormatRupiah();
+    })();
+    </script>
     <!-- jQuery (required for DataTables) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <!-- DataTables JS -->

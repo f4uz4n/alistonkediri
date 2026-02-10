@@ -62,8 +62,8 @@
                                                 <i class="bi bi-file-earmark-pdf fs-4"></i>
                                             </div>
                                             <div>
-                                                <span class="fw-bold text-dark d-block"><?= esc($doc['title'] ?: strtoupper(str_replace('_', ' ', $doc['type']))) ?></span>
-                                                <small class="text-muted text-uppercase" style="font-size: 0.6rem;"><?= str_replace('_', ' ', $doc['type']) ?></small>
+                                                <span class="fw-bold text-dark d-block"><?= esc($doc['title'] ?? strtoupper(str_replace('_', ' ', $doc['type'] ?? 'other'))) ?></span>
+                                                <small class="text-muted" style="font-size: 0.65rem;"><?= esc(str_replace('_', ' ', $doc['type'] ?? 'other')) ?></small>
                                             </div>
                                         </div>
                                     </td>
@@ -91,18 +91,20 @@
 
 <div class="card border-0 shadow-sm rounded-4 mt-4">
     <div class="card-header bg-white py-4 px-4 border-0">
-        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-cloud-arrow-up me-2"></i>Upload Berkas Baru</h5>
+        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-cloud-arrow-up me-2"></i>Upload Berkas (Multiple dengan Label)</h5>
+        <p class="text-secondary small mb-0 mt-1">Setiap berkas wajib diberi label (jenis). Bisa upload beberapa berkas sekaligus.</p>
     </div>
     <div class="card-body p-4 p-md-5">
         <form action="<?= base_url('agency/upload-document') ?>" method="post" enctype="multipart/form-data">
             <?= csrf_field() ?>
             <input type="hidden" name="participant_id" value="<?= (int)$participant['id'] ?>">
             <div id="uploadContainer">
-                <div class="upload-row mb-4 border-bottom pb-4 position-relative">
-                    <div class="row g-3">
+                <div class="upload-row mb-4 border rounded-4 p-4 bg-light bg-opacity-50 position-relative">
+                    <span class="upload-row-badge badge bg-primary rounded-pill position-absolute top-0 start-0 m-3">Berkas 1</span>
+                    <div class="row g-3 pt-2">
                         <div class="col-md-5">
-                            <label class="form-label small text-uppercase text-secondary fw-bold">Jenis Berkas</label>
-                            <select name="types[]" class="form-select form-select-lg bg-light border-0 rounded-3" required>
+                            <label class="form-label small text-uppercase text-secondary fw-bold">Label / Jenis Berkas <span class="text-danger">*</span></label>
+                            <select name="types[]" class="form-select form-select-lg bg-white border-0 rounded-3 shadow-sm" required>
                                 <option value="passport">Paspor</option>
                                 <option value="id_card">KTP</option>
                                 <option value="vaccine">Kartu Vaksin</option>
@@ -116,25 +118,25 @@
                             </select>
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label small text-uppercase text-secondary fw-bold">Judul (Opsional)</label>
-                            <input type="text" name="titles[]" class="form-control form-control-lg bg-light border-0 rounded-3" placeholder="Visa / Vaksin Meningitis / dll">
+                            <label class="form-label small text-uppercase text-secondary fw-bold">Keterangan (Opsional)</label>
+                            <input type="text" name="titles[]" class="form-control form-control-lg bg-white border-0 rounded-3 shadow-sm" placeholder="Contoh: Visa Saudi / Meningitis dosis 1">
                         </div>
                         <div class="col-md-2 d-flex align-items-end pb-2">
-                            <button type="button" class="btn btn-outline-danger btn-sm rounded-pill w-100 remove-row" style="display:none;"><i class="bi bi-trash"></i></button>
+                            <button type="button" class="btn btn-outline-danger btn-sm rounded-pill w-100 remove-row" style="display:none;"><i class="bi bi-trash"></i> Hapus</button>
                         </div>
                         <div class="col-12">
-                            <label class="form-label small text-uppercase text-secondary fw-bold">File</label>
-                            <input type="file" name="files[]" class="form-control bg-light border-0 rounded-3" required accept=".pdf,image/*">
+                            <label class="form-label small text-uppercase text-secondary fw-bold">File <span class="text-danger">*</span></label>
+                            <input type="file" name="files[]" class="form-control bg-white border-0 rounded-3 shadow-sm" required accept=".pdf,image/*">
                         </div>
                     </div>
                 </div>
             </div>
             <button type="button" class="btn btn-light rounded-pill px-4 fw-bold border mb-3 py-2" id="btnAddUpload">
-                <i class="bi bi-plus-lg me-1"></i> Tambah Berkas
+                <i class="bi bi-plus-lg me-1"></i> Tambah Baris Berkas
             </button>
             <div>
                 <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold">
-                    <i class="bi bi-cloud-upload me-2"></i> Mulai Upload
+                    <i class="bi bi-cloud-upload me-2"></i> Upload Semua Berkas
                 </button>
             </div>
         </form>
@@ -146,12 +148,23 @@ document.addEventListener('DOMContentLoaded', function() {
     var btnAddUpload = document.getElementById('btnAddUpload');
     var uploadContainer = document.getElementById('uploadContainer');
     
+    function updateRowLabels() {
+        var rows = uploadContainer.querySelectorAll('.upload-row');
+        rows.forEach(function(row, i) {
+            var badge = row.querySelector('.upload-row-badge');
+            if (badge) badge.textContent = 'Berkas ' + (i + 1);
+            var btn = row.querySelector('.remove-row');
+            if (btn) btn.style.display = rows.length > 1 ? 'inline-block' : 'none';
+        });
+    }
+    
     function toggleRemoveButtons() {
         var rows = uploadContainer.querySelectorAll('.upload-row');
         rows.forEach(function(row, i) {
             var btn = row.querySelector('.remove-row');
-            if (btn) btn.style.display = rows.length > 1 ? 'block' : 'none';
+            if (btn) btn.style.display = rows.length > 1 ? 'inline-block' : 'none';
         });
+        updateRowLabels();
     }
     
     uploadContainer.addEventListener('click', function(e) {
@@ -164,11 +177,14 @@ document.addEventListener('DOMContentLoaded', function() {
     btnAddUpload.addEventListener('click', function() {
         var firstRow = document.querySelector('.upload-row');
         var newRow = firstRow.cloneNode(true);
-        newRow.querySelectorAll('input').forEach(function(i) { i.value = ''; });
+        newRow.querySelectorAll('input[type="text"], input[type="file"]').forEach(function(i) { i.value = ''; });
         newRow.querySelector('select').selectedIndex = 0;
+        var badge = newRow.querySelector('.upload-row-badge');
+        if (badge) badge.textContent = '';
         var removeBtn = newRow.querySelector('.remove-row');
-        if (removeBtn) removeBtn.style.display = 'block';
+        if (removeBtn) removeBtn.style.display = 'inline-block';
         uploadContainer.appendChild(newRow);
+        updateRowLabels();
         toggleRemoveButtons();
     });
     

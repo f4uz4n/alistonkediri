@@ -54,7 +54,7 @@ $this->extend('layouts/public');
             <?php endforeach; ?>
         </div>
         <div class="text-center mt-5">
-            <a href="<?= base_url() ?>#agensi" class="btn btn-outline-primary rounded-pill px-4"><i class="bi bi-arrow-left me-1"></i> Kembali ke Beranda</a>
+            <a href="<?= base_url() ?>" class="btn btn-outline-primary rounded-pill px-4"><i class="bi bi-arrow-left me-1"></i> Kembali ke Beranda</a>
         </div>
         <?php endif; ?>
     </div>

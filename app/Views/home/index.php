@@ -45,7 +45,7 @@ $this->extend('layouts/public');
                     <h1 class="display-5 fw-bold mb-3">Perjalanan Ibadah Anda, Prioritas Kami</h1>
                     <p class="lead mb-4 opacity-90"><?= esc($companyName) ?> menyediakan paket perjalanan berkualitas dengan kemudahan pendaftaran melalui admin atau agen mitra terpercaya di sekitar Anda.</p>
                     <a href="#paket" class="btn btn-light btn-lg rounded-pill px-4 fw-bold me-2"><i class="bi bi-grid-3x3-gap me-2"></i>Lihat Paket</a>
-                    <a href="#agensi" class="btn btn-outline-light btn-lg rounded-pill px-4 fw-bold">Cari Agen</a>
+                    <a href="#kontak" class="btn btn-outline-light btn-lg rounded-pill px-4 fw-bold">Hubungi Kami</a>
                 </div>
             </div>
         </div>
@@ -59,7 +59,7 @@ $this->extend('layouts/public');
                     <h1 class="display-5 fw-bold mb-3">Perjalanan Ibadah Anda, Prioritas Kami</h1>
                     <p class="lead mb-4 opacity-90"><?= esc($companyName) ?> menyediakan paket perjalanan berkualitas dengan kemudahan pendaftaran melalui admin atau agen mitra terpercaya di sekitar Anda.</p>
                     <a href="#paket" class="btn btn-light btn-lg rounded-pill px-4 fw-bold me-2"><i class="bi bi-grid-3x3-gap me-2"></i>Lihat Paket</a>
-                    <a href="#agensi" class="btn btn-outline-light btn-lg rounded-pill px-4 fw-bold">Cari Agen</a>
+                    <a href="#kontak" class="btn btn-outline-light btn-lg rounded-pill px-4 fw-bold">Hubungi Kami</a>
                 </div>
                 <div class="col-lg-5 text-center mt-5 mt-lg-0">
                     <i class="bi bi-airplane-engines display-1 opacity-25"></i>
@@ -233,62 +233,6 @@ $paketChunks = array_chunk($packages ?? [], 3);
     </div>
 </section>
 
-<section id="agensi" class="py-5">
-    <div class="container py-5">
-        <div class="text-center mb-5">
-            <h2 class="section-title display-6 mb-2">Agen Mitra</h2>
-            <p class="text-secondary">Daftar melalui agen terdekat: tunjukkan foto, nama, dan alamat di bawah.</p>
-        </div>
-        <?php
-        $agencies_display = array_slice($agencies ?? [], 0, 6);
-        $has_more_agencies = count($agencies ?? []) > 6;
-        ?>
-        <?php if (empty($agencies)): ?>
-        <div class="text-center py-5">
-            <i class="bi bi-people text-muted display-4"></i>
-            <p class="text-secondary mt-3">Daftar agen mitra akan ditampilkan di sini. Hubungi admin untuk pendaftaran.</p>
-        </div>
-        <?php else: ?>
-        <div class="row g-4">
-            <?php foreach ($agencies_display as $a):
-                $imgPath = !empty($a['company_logo']) ? $a['company_logo'] : ($a['profile_pic'] ?? '');
-                $foto = $imgPath ? base_url($imgPath) : '';
-                $nama = !empty($a['company_name']) ? $a['company_name'] : ($a['full_name'] ?? $a['username'] ?? 'Agen');
-                $alamat = $a['address'] ?? '-';
-                $telp = $a['phone'] ?? '';
-                $wa = $telp ? 'https://wa.me/' . preg_replace('/[^0-9]/', '', $telp) : '';
-            ?>
-            <div class="col-md-6 col-lg-4">
-                <div class="card card-agency h-100 border-0">
-                    <div class="card-body text-center p-4">
-                        <div class="mb-3">
-                            <?php if ($foto): ?>
-                                <img src="<?= $foto ?>" alt="<?= esc($nama) ?>" class="agency-avatar">
-                            <?php else: ?>
-                                <div class="agency-avatar d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary fw-bold" style="font-size: 1.5rem;"><?= strtoupper(substr($nama, 0, 1)) ?></div>
-                            <?php endif; ?>
-                        </div>
-                        <h6 class="fw-bold text-dark mb-1"><?= esc($nama) ?></h6>
-                        <p class="small text-secondary mb-2"><i class="bi bi-geo-alt me-1"></i><?= esc($alamat) ?></p>
-                        <?php if ($wa): ?>
-                        <a href="<?= esc($wa) ?>" target="_blank" rel="noopener" class="btn btn-success btn-sm rounded-pill"><i class="bi bi-whatsapp me-1"></i> Hubungi</a>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php if ($has_more_agencies): ?>
-        <div class="text-center mt-4">
-            <a href="<?= base_url('agen-mitra') ?>" class="btn btn-outline-primary rounded-pill px-4">
-                <i class="bi bi-people me-1"></i> Lihat Semua Agen
-            </a>
-        </div>
-        <?php endif; ?>
-        <?php endif; ?>
-    </div>
-</section>
-
 <?php
 $testimonials = $testimonials ?? [];
 $captcha_a = $captcha_a ?? 1;
@@ -371,7 +315,7 @@ $testimoniChunks = array_chunk($testimonials, 3);
                 <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
                     <div class="card-body">
                         <h5 class="fw-bold text-dark mb-4"><i class="bi bi-telephone text-primary me-2"></i>Kontak</h5>
-                        <p class="text-secondary mb-3">Ingin daftar atau butuh informasi? Hubungi kami atau agen mitra di atas.</p>
+                        <p class="text-secondary mb-3">Ingin daftar atau butuh informasi? Hubungi kami atau lihat daftar agen mitra di menu Agen Mitra.</p>
                         <h6 class="fw-bold text-dark mb-3"><?= esc($companyName) ?></h6>
                         <?php if ($ownerPhone): ?>
                         <p class="mb-2"><i class="bi bi-whatsapp text-success me-2"></i> <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $ownerPhone) ?>" target="_blank" rel="noopener"><?= esc($ownerPhone) ?></a></p>
@@ -380,10 +324,10 @@ $testimoniChunks = array_chunk($testimonials, 3);
                         <p class="mb-2"><i class="bi bi-envelope text-primary me-2"></i> <a href="mailto:<?= esc($ownerEmail) ?>"><?= esc($ownerEmail) ?></a></p>
                         <?php endif; ?>
                         <?php if (!$ownerPhone && !$ownerEmail): ?>
-                        <p class="text-secondary mb-0">Silakan hubungi agen mitra di section Agen Mitra untuk pendaftaran.</p>
+                        <p class="text-secondary mb-0">Silakan lihat daftar agen mitra di menu Agen Mitra atau hubungi admin untuk pendaftaran.</p>
                         <?php endif; ?>
                         <hr>
-                        <p class="small text-secondary mb-0">Untuk pendaftaran paket, hubungi admin (kontak di atas) atau agen mitra yang terdaftar.</p>
+                        <p class="small text-secondary mb-0">Untuk pendaftaran paket, hubungi admin (kontak di atas) atau buka menu Agen Mitra untuk daftar agen terdaftar.</p>
                     </div>
                 </div>
             </div>

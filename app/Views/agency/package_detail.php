@@ -162,7 +162,7 @@
         <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mt-4">
             <h5 class="fw-bold text-dark mb-3 border-bottom pb-3"><i class="bi bi-cash-stack me-2 text-success"></i>Komisi Agency</h5>
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <span class="text-secondary small">Komisi per penumpang</span>
+                <span class="text-secondary small">Komisi per pack</span>
                 <div class="d-flex align-items-center gap-2">
                     <span id="commissionDisplay" class="fw-bold text-dark">Rp ••••••</span>
                     <span id="commissionValue" class="fw-bold text-success d-none">Rp <?= number_format($commission_per_pax, 0, ',', '.') ?></span>

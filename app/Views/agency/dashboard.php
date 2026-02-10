@@ -150,6 +150,18 @@
                     </div>
                     <i class="bi bi-chevron-right ms-auto text-muted"></i>
                 </a>
+                <div class="p-3 rounded-3 bg-light mb-0">
+                    <h6 class="text-dark fw-bold mb-3">Verifikasi Setoran Tabungan</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-secondary small">Sudah diverifikasi</span>
+                        <span class="badge bg-success rounded-pill"><?= (int)($stats['setoran_verified'] ?? 0) ?></span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-secondary small">Belum diverifikasi</span>
+                        <span class="badge bg-warning text-dark rounded-pill"><?= (int)($stats['setoran_pending'] ?? 0) ?></span>
+                    </div>
+                    <a href="<?= base_url('agency/tabungan') ?>" class="btn btn-outline-primary btn-sm rounded-pill w-100">Lihat Tabungan</a>
+                </div>
             </div>
         </div>
     </div>

@@ -432,9 +432,15 @@ class Participant extends BaseController
 
         $packages = $packageModel->orderBy('departure_date', 'DESC')->findAll();
         $hotels = $hotelModel->findAll();
+        $roomBedModel = new \App\Models\RoomBedModel();
+        $upgradeBedModel = new \App\Models\ParticipantUpgradeBedModel();
         foreach ($hotels as &$h) {
             $h['rooms'] = $roomModel->where('hotel_id', $h['id'])->findAll();
+            foreach ($h['rooms'] as &$r) {
+                $r['beds'] = $roomBedModel->getByRoom($r['id']);
+            }
         }
+        $participant_upgrade_beds = $upgradeBedModel->getQtyByParticipant($id);
 
         $stats = $this->getDocStats($id);
         $paid = $paymentModel->getTotalPaid($id);
@@ -460,6 +466,7 @@ class Participant extends BaseController
             'participant' => $participant,
             'packages' => $packages,
             'hotels' => $hotels,
+            'participant_upgrade_beds' => $participant_upgrade_beds,
             'doc_progress' => $stats['progress'],
             'doc_count' => $stats['verified_count'],
             'total_goal' => $stats['total_goal'],
@@ -524,13 +531,19 @@ class Participant extends BaseController
 
         $hotelModel = new \App\Models\HotelModel();
         $roomModel = new \App\Models\RoomModel();
+        $roomBedModel = new \App\Models\RoomBedModel();
+        $upgradeBedModel = new \App\Models\ParticipantUpgradeBedModel();
 
         $hotels = $hotelModel->findAll();
         foreach ($hotels as &$h) {
             $h['rooms'] = $roomModel->where('hotel_id', $h['id'])->findAll();
+            foreach ($h['rooms'] as &$r) {
+                $r['beds'] = $roomBedModel->getByRoom($r['id']);
+            }
         }
 
         $participant = $this->participantModel->find($id);
+        $participant_upgrade_beds = $upgradeBedModel->getQtyByParticipant($id);
 
         return $this->response->setJSON([
             'status' => 'success',
@@ -538,7 +551,8 @@ class Participant extends BaseController
             'current' => [
                 'hotel_upgrade_id' => $participant['hotel_upgrade_id'],
                 'room_upgrade_id' => $participant['room_upgrade_id'],
-                'upgrade_cost' => $participant['upgrade_cost']
+                'upgrade_cost' => $participant['upgrade_cost'],
+                'bed_qty' => $participant_upgrade_beds,
             ]
         ]);
     }
@@ -555,10 +569,38 @@ class Participant extends BaseController
             return redirect()->back()->with('error', $check['message']);
         }
 
+        $roomModel = new \App\Models\RoomModel();
+        $roomBedModel = new \App\Models\RoomBedModel();
+        $upgradeBedModel = new \App\Models\ParticipantUpgradeBedModel();
+
+        $hotelUpgradeId = $this->request->getPost('hotel_upgrade_id') ?: null;
+        $roomUpgradeId = $this->request->getPost('room_upgrade_id') ?: null;
+        $bedQty = $this->request->getPost('bed_qty');
+        if (!is_array($bedQty)) {
+            $bedQty = [];
+        }
+
+        $upgradeCost = 0;
+        if ($roomUpgradeId) {
+            $room = $roomModel->find($roomUpgradeId);
+            if ($room) {
+                $upgradeCost = (float) ($room['price_per_pax'] ?? 0);
+                $beds = $roomBedModel->getByRoom($roomUpgradeId);
+                foreach ($beds as $bed) {
+                    $qty = (int) ($bedQty[$bed['id']] ?? 0);
+                    if ($qty > 0) {
+                        $upgradeCost += (float) $bed['price'] * $qty;
+                    }
+                }
+            }
+        }
+
+        $upgradeBedModel->replaceForParticipant($id, $bedQty);
+
         $data = [
-            'hotel_upgrade_id' => $this->request->getPost('hotel_upgrade_id') ?: null,
-            'room_upgrade_id' => $this->request->getPost('room_upgrade_id') ?: null,
-            'upgrade_cost' => $this->request->getPost('upgrade_cost'),
+            'hotel_upgrade_id' => $hotelUpgradeId,
+            'room_upgrade_id' => $roomUpgradeId,
+            'upgrade_cost' => $upgradeCost,
         ];
 
         $this->participantModel->update($id, $data);

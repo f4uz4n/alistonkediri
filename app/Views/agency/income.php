@@ -43,24 +43,36 @@
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm rounded-4 mb-4 bg-primary text-white overflow-hidden">
-            <div class="card-body p-4 position-relative">
-                <div class="d-flex align-items-center">
-                    <div class="bg-white bg-opacity-25 p-3 rounded-circle me-3">
-                        <i class="bi bi-wallet2 text-white fs-2"></i>
-                    </div>
-                    <div>
-                        <p class="text-white text-opacity-75 text-uppercase small fw-bold ls-1 mb-0">Total Komisi (Terverifikasi)</p>
-                        <h2 class="fw-800 text-white mb-0">Rp <?= number_format($total_income, 0, ',', '.') ?></h2>
+        <div class="row g-3 mb-4">
+            <div class="col-md-8">
+                <div class="card border-0 shadow-sm rounded-4 bg-primary text-white overflow-hidden h-100">
+                    <div class="card-body p-4 position-relative">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-white bg-opacity-25 p-3 rounded-circle me-3">
+                                <i class="bi bi-wallet2 text-white fs-2"></i>
+                            </div>
+                            <div>
+                                <p class="text-white text-opacity-75 text-uppercase small fw-bold ls-1 mb-0">Sudah Dibayarkan</p>
+                                <h2 class="fw-800 text-white mb-0">Rp <?= number_format($total_income, 0, ',', '.') ?></h2>
+                            </div>
+                        </div>
+                        <i class="bi bi-currency-dollar position-absolute text-white opacity-10" style="font-size: 10rem; right: -30px; top: -30px;"></i>
                     </div>
                 </div>
-                <i class="bi bi-currency-dollar position-absolute text-white opacity-10" style="font-size: 10rem; right: -30px; top: -30px;"></i>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4 border h-100">
+                    <div class="card-body p-4">
+                        <p class="text-secondary text-uppercase small fw-bold ls-1 mb-1">Belum Dibayarkan</p>
+                        <h4 class="fw-800 text-dark mb-0">Rp <?= number_format($total_pending ?? 0, 0, ',', '.') ?></h4>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
             <div class="card-header bg-white py-4 px-4">
-                <h5 class="fw-bold text-dark mb-0">Daftar Komisi Terverifikasi</h5>
+                <h5 class="fw-bold text-dark mb-0">Daftar Komisi</h5>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -70,16 +82,17 @@
                                 <th class="ps-4 py-3 text-secondary small text-uppercase">Tanggal Verifikasi</th>
                                 <th class="py-3 text-secondary small text-uppercase">Paket</th>
                                 <th class="py-3 text-secondary small text-uppercase">Jadwal Berangkat</th>
+                                <th class="py-3 text-secondary small text-uppercase">Status</th>
                                 <th class="pe-4 py-3 text-end text-secondary small text-uppercase">Nominal Komisi (Rp)</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($commissions)): ?>
                                 <tr>
-                                    <td colspan="4" class="text-center py-5 text-muted">
+                                    <td colspan="5" class="text-center py-5 text-muted">
                                         <div class="py-3">
                                             <i class="bi bi-receipt text-secondary opacity-25 display-4 d-block mb-2"></i>
-                                            Belum ada komisi yang diverifikasi. Komisi akan muncul setelah admin memverifikasi pembayaran.
+                                            Belum ada data komisi.
                                         </div>
                                     </td>
                                 </tr>
@@ -97,6 +110,13 @@
                                     </td>
                                     <td>
                                         <?= !empty($c['departure_date']) ? date('d M Y', strtotime($c['departure_date'])) : '—' ?>
+                                    </td>
+                                    <td>
+                                        <?php if (($c['status'] ?? '') === 'paid'): ?>
+                                        <span class="badge bg-success rounded-pill">Sudah Dibayarkan</span>
+                                        <?php else: ?>
+                                        <span class="badge bg-warning text-dark rounded-pill">Belum Dibayarkan</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="pe-4 text-end fw-bold text-dark">
                                         Rp <?= number_format((float)$c['amount_final'], 0, ',', '.') ?>

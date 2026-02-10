@@ -171,9 +171,14 @@ $isCancelled = ($participant['status'] ?? '') === 'cancelled';
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div class="mb-3" id="bedQtySection" style="display:none;">
+                        <label class="form-label small fw-bold">Tambahan Bed / Kasur (qty)</label>
+                        <p class="small text-muted mb-2">Pilih jumlah penambahan bed per tipe; biaya = harga × qty.</p>
+                        <div id="bedQtyContainer"></div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Biaya Upgrade (Rp)</label>
-                        <input type="number" name="upgrade_cost" id="upgradeCostInput" class="form-control" value="<?= esc($participant['upgrade_cost'] ?? '') ?>" placeholder="0" min="0" step="0.01">
+                        <input type="number" name="upgrade_cost" id="upgradeCostInput" class="form-control" value="<?= esc($participant['upgrade_cost'] ?? '') ?>" placeholder="0" min="0" step="0.01" readonly>
                         <div id="rekomendasiHarga" class="small text-success mt-1" style="display:none;"></div>
                     </div>
                     <button type="submit" class="btn btn-primary rounded-pill px-4"><i class="bi bi-check2 me-1"></i> Simpan Hotel & Kamar</button>
@@ -192,12 +197,24 @@ document.addEventListener('DOMContentLoaded', function() {
     var roomSelect = document.getElementById('roomSelect');
     var upgradeCostInput = document.getElementById('upgradeCostInput');
     var rekomendasiEl = document.getElementById('rekomendasiHarga');
+    var bedQtySection = document.getElementById('bedQtySection');
+    var bedQtyContainer = document.getElementById('bedQtyContainer');
 
-    // Data harga per kamar (rekomendasi biaya upgrade = price_per_pax kamar)
     var roomPrices = <?= json_encode(array_reduce($hotels ?? [], function($carry, $h) {
         foreach ($h['rooms'] as $r) { $carry[$r['id']] = (float)($r['price_per_pax'] ?? 0); }
         return $carry;
     }, [])) ?>;
+
+    var roomBeds = <?= json_encode(array_reduce($hotels ?? [], function($carry, $h) {
+        foreach ($h['rooms'] as $r) {
+            $carry[$r['id']] = array_map(function($b) {
+                return ['id' => (int)$b['id'], 'name' => $b['name'], 'price' => (float)($b['price'] ?? 0)];
+            }, $r['beds'] ?? []);
+        }
+        return $carry;
+    }, [])) ?>;
+
+    var participantBedQty = <?= json_encode($participant_upgrade_beds ?? []) ?>;
 
     function filterRooms() {
         var hid = hotelSelect.value;
@@ -209,31 +226,78 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!hid) {
             roomSelect.value = '';
             rekomendasiEl.style.display = 'none';
+            bedQtySection.style.display = 'none';
             return;
         }
         var firstRoom = roomSelect.querySelector('option[data-hotel-id="' + hid + '"]');
         if (firstRoom && roomSelect.value !== firstRoom.value) roomSelect.value = '';
-        applyRoomRecommendation();
+        renderBedsForRoom();
+        recalcUpgradeCost();
     }
 
-    function applyRoomRecommendation() {
+    function renderBedsForRoom() {
         var rid = roomSelect.value;
-        rekomendasiEl.style.display = 'none';
-        if (!rid) return;
-        var price = roomPrices[rid];
-        if (price != null && price > 0) {
-            upgradeCostInput.value = price;
-            rekomendasiEl.textContent = 'Rekomendasi perubahan harga (dari master kamar): Rp ' + Number(price).toLocaleString('id-ID');
+        if (!rid) {
+            bedQtySection.style.display = 'none';
+            return;
+        }
+        var beds = roomBeds[rid] || [];
+        bedQtyContainer.innerHTML = '';
+        if (beds.length === 0) {
+            bedQtySection.style.display = 'block';
+            bedQtyContainer.innerHTML = '<p class="small text-muted mb-0">Tidak ada master bed untuk kamar ini.</p>';
+            return;
+        }
+        bedQtySection.style.display = 'block';
+        beds.forEach(function(b) {
+            var qty = participantBedQty[b.id] || 0;
+            var row = document.createElement('div');
+            row.className = 'd-flex align-items-center gap-2 mb-2';
+            row.innerHTML =
+                '<label class="small mb-0 flex-grow-1">' + escapeHtml(b.name) + ' — Rp ' + Number(b.price).toLocaleString('id-ID') + '</label>' +
+                '<input type="number" name="bed_qty[' + b.id + ']" class="form-control form-control-sm bed-qty-input" style="width:80px" min="0" value="' + qty + '" data-bed-id="' + b.id + '" data-bed-price="' + b.price + '">';
+            bedQtyContainer.appendChild(row);
+        });
+        bedQtyContainer.querySelectorAll('.bed-qty-input').forEach(function(inp) {
+            inp.addEventListener('input', recalcUpgradeCost);
+        });
+    }
+
+    function escapeHtml(s) {
+        var div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+    }
+
+    function recalcUpgradeCost() {
+        var rid = roomSelect.value;
+        var base = (rid && roomPrices[rid] != null) ? roomPrices[rid] : 0;
+        var bedTotal = 0;
+        bedQtyContainer.querySelectorAll('.bed-qty-input').forEach(function(inp) {
+            var qty = parseInt(inp.value, 10) || 0;
+            var price = parseFloat(inp.getAttribute('data-bed-price')) || 0;
+            bedTotal += price * qty;
+        });
+        var total = base + bedTotal;
+        upgradeCostInput.value = total;
+        if (rid && (base > 0 || bedTotal > 0)) {
+            rekomendasiEl.textContent = 'Kamar: Rp ' + Number(base).toLocaleString('id-ID') + (bedTotal > 0 ? ' + Bed: Rp ' + Number(bedTotal).toLocaleString('id-ID') : '') + ' = Rp ' + Number(total).toLocaleString('id-ID');
             rekomendasiEl.style.display = 'block';
+        } else {
+            rekomendasiEl.style.display = 'none';
         }
     }
 
-    roomSelect.addEventListener('change', applyRoomRecommendation);
+    roomSelect.addEventListener('change', function() {
+        renderBedsForRoom();
+        recalcUpgradeCost();
+    });
 
     hotelSelect.addEventListener('change', function() {
         filterRooms();
         roomSelect.value = '';
         rekomendasiEl.style.display = 'none';
+        bedQtySection.style.display = 'none';
     });
     filterRooms();
 });

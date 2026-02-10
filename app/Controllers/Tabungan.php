@@ -35,15 +35,27 @@ class Tabungan extends BaseController
         }
 
         $status = $this->request->getGet('status');
+        $cari = trim((string) $this->request->getGet('cari'));
         $builder = $this->savingModel->getWithAgency();
         if ($status !== null && $status !== '') {
             $builder->where('travel_savings.status', $status);
         }
+        if ($cari !== '') {
+            $builder->groupStart()
+                ->like('travel_savings.nik', $cari)
+                ->orLike('travel_savings.name', $cari)
+                ->groupEnd();
+        }
         $savings = $builder->findAll();
+        $pending_deposits = $this->depositModel->getPendingWithSavingAndAgency();
+        $activeTab = $this->request->getGet('tab') === 'verifikasi' ? 'verifikasi' : 'daftar';
 
         $data = [
             'savings' => $savings,
+            'pending_deposits' => $pending_deposits,
             'filterStatus' => $status,
+            'filterCari' => $cari,
+            'activeTab' => $activeTab,
             'title' => 'Tabungan Perjalanan',
         ];
         return view('owner/tabungan/index', $data);
@@ -164,6 +176,25 @@ class Tabungan extends BaseController
             return redirect()->to("owner/tabungan/deposit/{$travelSavingId}")->with('error', 'Gagal menyimpan setoran.');
         }
         return redirect()->to("owner/tabungan/deposit/{$travelSavingId}")->with('msg', 'Setoran berhasil ditambahkan.');
+    }
+
+    /**
+     * Verifikasi setoran (dari agency): pending -> verified, lalu update total_balance.
+     */
+    public function verifyDeposit($depositId)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+        $deposit = $this->depositModel->find($depositId);
+        if (!$deposit || $deposit['status'] === 'verified') {
+            return redirect()->to('owner/tabungan')->with('error', 'Setoran tidak ditemukan atau sudah diverifikasi.');
+        }
+        $travelSavingId = (int) $deposit['travel_saving_id'];
+        $this->depositModel->update($depositId, ['status' => 'verified']);
+        $newTotal = $this->depositModel->getTotalVerified($travelSavingId);
+        $this->savingModel->update($travelSavingId, ['total_balance' => $newTotal]);
+        return redirect()->back()->with('msg', 'Setoran telah diverifikasi. Saldo tabungan diperbarui.');
     }
 
     public function claimForm($id)

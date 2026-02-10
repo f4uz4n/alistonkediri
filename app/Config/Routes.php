@@ -64,6 +64,10 @@ $routes->group('owner', ['filter' => 'auth:owner'], function ($routes) {
             $routes->get('rooms/edit/(:num)', 'Hotel::editRoom/$1');
             $routes->post('rooms/update/(:num)', 'Hotel::updateRoom/$1');
             $routes->get('rooms/delete/(:num)', 'Hotel::deleteRoom/$1');
+            // Master bed/kasur per kamar
+            $routes->post('rooms/beds/store', 'Hotel::storeBed');
+            $routes->post('rooms/beds/update/(:num)', 'Hotel::updateBed/$1');
+            $routes->post('rooms/beds/delete/(:num)', 'Hotel::deleteBed/$1');
         }
         );
 
@@ -116,6 +120,7 @@ $routes->group('owner', ['filter' => 'auth:owner'], function ($routes) {
         $routes->post('tabungan/store-deposit', 'Tabungan::storeDeposit');
         $routes->get('tabungan/claim/(:num)', 'Tabungan::claimForm/$1');
         $routes->post('tabungan/do-claim', 'Tabungan::doClaim');
+        $routes->post('tabungan/verify-deposit/(:num)', 'Tabungan::verifyDeposit/$1');
 
         // Reports
         $routes->get('reports', 'Reports::index');
@@ -166,6 +171,11 @@ $routes->group('agency', ['filter' => 'auth:agency'], function ($routes) {
 
     // Participant Management (Edit & List)
     $routes->get('participants', 'Agency::participants');
+    $routes->get('tabungan', 'Agency::tabunganIndex');
+    $routes->get('tabungan/create', 'Agency::tabunganCreate');
+    $routes->post('tabungan/store', 'Agency::tabunganStore');
+    $routes->get('tabungan/deposit/(:num)', 'Agency::tabunganDeposit/$1');
+    $routes->post('tabungan/store-deposit', 'Agency::tabunganStoreDeposit');
     $routes->get('edit-participant/(:num)', 'Agency::editParticipant/$1');
     $routes->post('update-participant/(:num)', 'Agency::updateParticipant/$1');
     $routes->get('registration-form/(:num)', 'Agency::registrationFormPrint/$1');

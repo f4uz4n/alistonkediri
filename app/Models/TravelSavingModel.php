@@ -23,4 +23,10 @@ class TravelSavingModel extends Model
             ->join('users', 'users.id = travel_savings.agency_id')
             ->orderBy('travel_savings.created_at', 'DESC');
     }
+
+    /** Daftar tabungan per agensi (untuk menu agency). */
+    public function getByAgency($agencyId)
+    {
+        return $this->where('agency_id', $agencyId)->orderBy('created_at', 'DESC');
+    }
 }
