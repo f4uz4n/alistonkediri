@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Models\UserModel;
 use App\Libraries\JWTService;
 use App\Libraries\RateLimiter;
+use CodeIgniter\Cookie\Cookie;
 
 class Auth extends BaseController
 {
@@ -98,12 +99,20 @@ class Auth extends BaseController
 
                 // Set JWT token di cookie (HttpOnly untuk keamanan)
                 $response = redirect()->to($user['role'] == 'owner' ? 'owner' : 'agency');
-                $response->setCookie('jwt_token', $token, [
-                    'expires' => time() + 86400, // 24 jam
-                    'httponly' => true,
-                    'secure' => isset($_SERVER['HTTPS']), // Hanya kirim via HTTPS jika tersedia
-                    'samesite' => 'Lax'
-                ]);
+                
+                // Set cookie menggunakan Cookie class CodeIgniter 4
+                $cookie = new Cookie(
+                    'jwt_token',
+                    $token,
+                    [
+                        'expires' => time() + 86400, // 24 jam
+                        'httponly' => true,
+                        'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+                        'samesite' => Cookie::SAMESITE_LAX
+                    ]
+                );
+                
+                $response->setCookie($cookie);
 
                 return $response;
             } else {
@@ -159,12 +168,18 @@ class Auth extends BaseController
                 'success' => true,
                 'token' => $newToken
             ]);
-            $response->setCookie('jwt_token', $newToken, [
-                'expires' => time() + 86400,
-                'httponly' => true,
-                'secure' => isset($_SERVER['HTTPS']),
-                'samesite' => 'Lax'
-            ]);
+            // Set cookie menggunakan Cookie class CodeIgniter 4
+            $cookie = new Cookie(
+                'jwt_token',
+                $newToken,
+                [
+                    'expires' => time() + 86400,
+                    'httponly' => true,
+                    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+                    'samesite' => Cookie::SAMESITE_LAX
+                ]
+            );
+            $response->setCookie($cookie);
             return $response;
         }
 
