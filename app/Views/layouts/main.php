@@ -446,7 +446,7 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="<?= base_url('owner/participant/documents') ?>" class="nav-link <?= strpos(current_url(), 'documents') !== false ? 'active' : '' ?>">
+                            <a href="<?= base_url('owner/participant/documents') ?>" class="nav-link <?= strpos(current_url(), 'participant/documents') !== false ? 'active' : '' ?>">
                                 <i class="bi bi-file-earmark-check-fill"></i>
                                 <span>Kelengkapan Berkas</span>
                             </a>

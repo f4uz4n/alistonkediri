@@ -105,6 +105,8 @@ $routes->group('owner', ['filter' => 'auth:owner'], function ($routes) {
             $routes->get('cancellations', 'Participant::cancellations');
             $routes->get('cancel-form/(:num)', 'Participant::cancelForm/$1');
             $routes->post('store-cancellation', 'Participant::storeCancellation');
+            $routes->post('reactivate/(:num)', 'Participant::reactivate/$1');
+            $routes->get('cancellation-statement/(:num)', 'Participant::cancellationStatement/$1');
 
             // Registrasi dari Kantor (route dengan (:num) harus di atas agar tidak tertimpa)
             $routes->get('register/(:num)', 'Participant::registerFromOfficeForm/$1');

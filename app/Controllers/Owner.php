@@ -61,6 +61,51 @@ class Owner extends BaseController
             ->orderBy('total', 'DESC')
             ->findAll() ?? [];
 
+        // 5. Grafik Pembatalan & Pemberangkatan (mengikuti filter tanggal)
+        $chartStart = !empty($filters['start_date']) ? $filters['start_date'] : date('Y-m-d', strtotime('-2 months'));
+        $chartEnd = !empty($filters['end_date']) ? $filters['end_date'] : date('Y-m-d');
+        $chartMonths = [];
+        $chartCancellation = [];
+        $chartDeparture = [];
+        $db = \Config\Database::connect();
+        $agencyId = $filters['agency_id'] ?? null;
+        $packageId = $filters['package_id'] ?? null;
+
+        $current = strtotime(date('Y-m-01', strtotime($chartStart)));
+        $endTime = strtotime(date('Y-m-t', strtotime($chartEnd)));
+        while ($current <= $endTime) {
+            $start = date('Y-m-01', $current);
+            $end = date('Y-m-t', $current);
+            $chartMonths[] = date('M Y', $current);
+
+            $cancelBuilder = $db->table('participants')
+                ->where('status', 'cancelled')
+                ->where('cancelled_at >=', $start . ' 00:00:00')
+                ->where('cancelled_at <=', $end . ' 23:59:59');
+            if ($agencyId) {
+                $cancelBuilder->where('participants.agency_id', $agencyId);
+            }
+            if ($packageId) {
+                $cancelBuilder->where('participants.package_id', $packageId);
+            }
+            $chartCancellation[] = $cancelBuilder->countAllResults();
+
+            $depBuilder = $db->table('participants')
+                ->join('travel_packages', 'travel_packages.id = participants.package_id')
+                ->where('participants.status !=', 'cancelled')
+                ->where('travel_packages.departure_date >=', $start)
+                ->where('travel_packages.departure_date <=', $end);
+            if ($agencyId) {
+                $depBuilder->where('participants.agency_id', $agencyId);
+            }
+            if ($packageId) {
+                $depBuilder->where('participants.package_id', $packageId);
+            }
+            $chartDeparture[] = $depBuilder->countAllResults();
+
+            $current = strtotime('+1 month', $current);
+        }
+
         $data = [
             'filters' => $filters,
             'stats' => $stats,
@@ -70,7 +115,10 @@ class Owner extends BaseController
             'packages_list' => $packageModel->findAll() ?? [],
             'agency_perf' => $agencyPerformance,
             'package_dist' => $packageDistribution,
-            'materials_count' => $materialModel->countAllResults()
+            'materials_count' => $materialModel->countAllResults(),
+            'chart_months' => $chartMonths,
+            'chart_cancellation' => $chartCancellation,
+            'chart_departure' => $chartDeparture,
         ];
 
         return view('owner/dashboard', $data);
@@ -282,10 +330,14 @@ class Owner extends BaseController
         // Daftar jamaah untuk dropdown filter (select by nama jamaah)
         $participantsList = $participantModel->select('id, name')->orderBy('name', 'ASC')->findAll();
 
+        $userModel = new \App\Models\UserModel();
+        $owner = $userModel->where('role', 'owner')->first();
+
         $data = [
             'payments' => $payments,
             'active_tab' => $tab,
             'participants_list' => $participantsList,
+            'nama_sekretaris_bendahara' => $owner['nama_sekretaris_bendahara'] ?? '',
             'filters' => [
                 'search' => $search,
                 'participant_id' => $participantId,
@@ -417,6 +469,7 @@ class Owner extends BaseController
             'address' => $this->request->getPost('address'),
             'company_name' => $this->request->getPost('company_name'),
             'slogan' => $this->request->getPost('slogan'),
+            'nama_sekretaris_bendahara' => $this->request->getPost('nama_sekretaris_bendahara') ?: null,
             'no_sk_perijinan' => $this->request->getPost('no_sk_perijinan'),
             'tanggal_sk_perijinan' => $this->request->getPost('tanggal_sk_perijinan') ?: null,
         ];

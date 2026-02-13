@@ -42,6 +42,7 @@ class Participant extends BaseController
         $status = $this->request->getGet('status');
 
         $builder = $this->participantModel->getParticipantBuilder();
+        $builder->where('participants.status !=', 'cancelled'); // Jamaah batal hanya tampil di menu Pembatalan
 
         if ($keyword) {
             $builder->groupStart()
@@ -246,9 +247,14 @@ class Participant extends BaseController
             ->orderBy('payment_date', 'ASC')
             ->findAll();
 
+        $userModel = new UserModel();
+        $owner = $userModel->where('role', 'owner')->first();
+        $namaPenandatangan = !empty($owner['nama_sekretaris_bendahara']) ? $owner['nama_sekretaris_bendahara'] : ($owner['full_name'] ?? '—');
+
         $data = [
             'participant' => $participant,
             'payments' => $payments,
+            'nama_penandatangan' => $namaPenandatangan,
             'title' => 'Kwitansi Pendaftaran - ' . $participant['name']
         ];
 
@@ -381,7 +387,7 @@ class Participant extends BaseController
 
         $userModel = new UserModel();
         $owner = $userModel->where('role', 'owner')->first();
-        $namaDirektur = $owner['full_name'] ?? '—';
+        $namaPenandatangan = !empty($owner['nama_sekretaris_bendahara']) ? $owner['nama_sekretaris_bendahara'] : ($owner['full_name'] ?? '—');
         $namaPt = $owner['company_name'] ?? '';
         $alamatPt = $owner['address'] ?? '';
         $companyLogo = !empty($owner['company_logo']) ? base_url($owner['company_logo']) : base_url('assets/img/logo_.png');
@@ -393,7 +399,7 @@ class Participant extends BaseController
         $data = [
             'participant' => $participant,
             'payment' => $payment,
-            'nama_direktur' => $namaDirektur,
+            'nama_penandatangan' => $namaPenandatangan,
             'nama_pt' => $namaPt,
             'alamat_pt' => $alamatPt,
             'company_logo_url' => $companyLogo,
@@ -917,17 +923,40 @@ class Participant extends BaseController
             return redirect()->to('/login');
         }
 
-        $paymentModel = new PaymentModel();
-        $list = $this->participantModel->getParticipantBuilder()
-            ->where('participants.status', 'cancelled')
-            ->orderBy('participants.cancelled_at', 'DESC')
-            ->findAll();
+        $search = trim($this->request->getGet('search') ?? '');
+        $dateFrom = $this->request->getGet('date_from') ?? '';
+        $dateTo = $this->request->getGet('date_to') ?? '';
 
+        $builder = $this->participantModel->getParticipantBuilder()
+            ->where('participants.status', 'cancelled')
+            ->orderBy('participants.cancelled_at', 'DESC');
+
+        if ($search !== '') {
+            $builder->groupStart()
+                ->like('participants.name', $search)
+                ->orLike('participants.nik', $search)
+                ->groupEnd();
+        }
+        if ($dateFrom !== '') {
+            $builder->where('DATE(participants.cancelled_at) >=', $dateFrom);
+        }
+        if ($dateTo !== '') {
+            $builder->where('DATE(participants.cancelled_at) <=', $dateTo);
+        }
+
+        $list = $builder->findAll();
+
+        $paymentModel = new PaymentModel();
         foreach ($list as &$row) {
             $row['total_paid'] = ($paymentModel->getTotalPaid($row['id'])['amount'] ?? 0);
         }
 
-        $data = ['list' => $list];
+        $data = [
+            'list' => $list,
+            'search' => $search,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+        ];
         return view('owner/participant/cancellations', $data);
     }
 
@@ -997,6 +1026,8 @@ class Participant extends BaseController
         $participantId = (int) $this->request->getPost('participant_id');
         $refundAmount = $this->request->getPost('refund_amount');
         $notes = $this->request->getPost('cancellation_notes');
+        $refundRekening = trim($this->request->getPost('refund_rekening') ?? '');
+        $refundBankName = trim($this->request->getPost('refund_bank_name') ?? '');
 
         $p = $this->participantModel->find($participantId);
         if (!$p) {
@@ -1004,6 +1035,9 @@ class Participant extends BaseController
         }
         if ($p['status'] === 'cancelled') {
             return redirect()->to('owner/participant/cancellations')->with('error', 'Jamaah ini sudah dibatalkan.');
+        }
+        if (empty($refundRekening)) {
+            return redirect()->back()->withInput()->with('error', 'No. rekening yang ditransfer wajib diisi.');
         }
 
         $refund = is_numeric($refundAmount) ? (float) $refundAmount : 0;
@@ -1013,9 +1047,72 @@ class Participant extends BaseController
             'cancelled_at' => date('Y-m-d H:i:s'),
             'refund_amount' => $refund,
             'cancellation_notes' => $notes,
+            'refund_rekening' => $refundRekening,
+            'refund_bank_name' => $refundBankName ?: null,
         ]);
 
         return redirect()->to('owner/participant/cancellations')->with('msg', 'Pembatalan berhasil dicatat. Refund: Rp ' . number_format($refund, 0, ',', '.'));
+    }
+
+    /**
+     * Aktifkan kembali jamaah yang dibatalkan (status cancelled → pending).
+     */
+    public function reactivate($id)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+        $p = $this->participantModel->find($id);
+        if (!$p) {
+            return redirect()->to('owner/participant')->with('error', 'Jamaah tidak ditemukan.');
+        }
+        if ($p['status'] !== 'cancelled') {
+            return redirect()->to('owner/participant/kelola/' . $id)->with('error', 'Jamaah tidak dalam status batal.');
+        }
+        $this->participantModel->update($id, [
+            'status' => 'pending',
+            'cancelled_at' => null,
+            'refund_amount' => null,
+            'cancellation_notes' => null,
+            'refund_rekening' => null,
+            'refund_bank_name' => null,
+        ]);
+        return redirect()->to('owner/participant/kelola/' . $id)->with('msg', 'Jamaah berhasil diaktifkan kembali.');
+    }
+
+    /**
+     * Cetak surat pernyataan pembatalan beserta nominal refund dan no rekening.
+     */
+    public function cancellationStatement($id)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+        $participant = $this->participantModel->getParticipantBuilder()
+            ->where('participants.id', $id)
+            ->where('participants.status', 'cancelled')
+            ->first();
+        if (!$participant) {
+            return redirect()->to('owner/participant/cancellations')->with('error', 'Data jamaah batal tidak ditemukan.');
+        }
+        $paymentModel = new PaymentModel();
+        $participant['total_paid'] = ($paymentModel->getTotalPaid($id)['amount'] ?? 0);
+        $userModel = new UserModel();
+        $owner = $userModel->where('role', 'owner')->first();
+        $companyName = $owner['company_name'] ?? 'Perusahaan';
+        $data = [
+            'participant' => $participant,
+            'company_name' => $companyName,
+            'company_logo_url' => !empty($owner['company_logo']) ? base_url($owner['company_logo']) : '',
+            'company_slogan' => $owner['slogan'] ?? '',
+            'company_address' => $owner['address'] ?? '',
+            'company_email' => $owner['email'] ?? '',
+            'company_phone' => $owner['phone'] ?? '',
+            'no_sk_perijinan' => $owner['no_sk_perijinan'] ?? '',
+            'tanggal_sk_perijinan' => $owner['tanggal_sk_perijinan'] ?? '',
+            'nama_pemilik' => $owner['full_name'] ?? '',
+        ];
+        return view('owner/participant/cancellation_statement_print', $data);
     }
 
     /**

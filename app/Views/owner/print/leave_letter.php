@@ -37,8 +37,11 @@
         .bold-dates { font-weight: 700; }
         .salam-bold { font-weight: 700; }
         .data-jamaah { margin: 12px 0; padding-left: 30px; }
-        .data-jamaah .baris { margin-bottom: 4px; }
-        .data-jamaah .baris strong { font-weight: 700; }
+        .data-jamaah table { border-collapse: collapse; width: auto; min-width: 320px; }
+        .data-jamaah td { padding: 2px 8px 2px 0; vertical-align: top; font-size: 12pt; }
+        .data-jamaah td:first-child { width: 1px; white-space: nowrap; font-weight: 700; }
+        .data-jamaah .label-cell { padding-right: 4px; }
+        .data-jamaah .value-cell { padding-left: 2px; }
         .ttd-block { margin-top: 36px; text-align: right; }
         .ttd-block .hormat { font-size: 11pt; margin-bottom: 4px; }
         .ttd-block .nama-pt { font-weight: 700; font-size: 11pt; color: #1e293b; margin-bottom: 8px; }
@@ -117,9 +120,20 @@
         <p>Sehubungan akan diberangkatkan Jamaah Umroh <?= esc($company_name) ?> ke Tanah Suci yang Insya Allah akan dilaksanakan pada tanggal <span class="bold-dates"><?= date('d F Y', $departure_date) ?></span> sampai dengan <span class="bold-dates"><?= date('d F Y', $return_date) ?></span> maka dengan ini kami mengajukan permohonan izin atas:</p>
 
         <div class="data-jamaah">
-            <div class="baris"><strong>Nama</strong> : <?= esc(strtoupper($participant['name'])) ?></div>
-            <div class="baris"><strong><?= esc($label_program_studi) ?></strong> : <?= esc($isi_program_studi ?: '—') ?></div>
-            <div class="baris"><strong><?= esc($label_fakultas) ?></strong> : <?= esc($isi_fakultas ?: '—') ?></div>
+            <table>
+                <tr>
+                    <td class="label-cell">Nama</td>
+                    <td class="value-cell">: <?= esc(strtoupper($participant['name'])) ?></td>
+                </tr>
+                <tr>
+                    <td class="label-cell"><?= esc($label_program_studi) ?></td>
+                    <td class="value-cell">: <?= esc($isi_program_studi ?: '—') ?></td>
+                </tr>
+                <tr>
+                    <td class="label-cell"><?= esc($label_fakultas) ?></td>
+                    <td class="value-cell">: <?= esc($isi_fakultas ?: '—') ?></td>
+                </tr>
+            </table>
         </div>
 
         <p>Demikian surat permohonan izin ini kami sampaikan. Atas terkabulnya permohonan ini kami sampaikan terima kasih.</p>

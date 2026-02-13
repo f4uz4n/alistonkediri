@@ -73,9 +73,18 @@ $isCancelled = ($participant['status'] ?? '') === 'cancelled';
                                 <a href="<?= base_url('owner/participant/documents/' . $participant['id']) ?>" class="btn btn-primary btn-sm rounded-pill">
                                     <i class="bi bi-file-earmark-check me-1"></i> Lihat Berkas
                                 </a>
+                                <?php if ($isCancelled): ?>
+                                <form action="<?= base_url('owner/participant/reactivate/' . $participant['id']) ?>" method="post" class="d-inline" onsubmit="return confirm('Aktifkan kembali jamaah ini? Status akan diubah dari batal menjadi pending.');">
+                                    <?= csrf_field() ?>
+                                    <button type="submit" class="btn btn-outline-success btn-sm rounded-pill">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Aktifkan Kembali Jamaah
+                                    </button>
+                                </form>
+                                <?php else: ?>
                                 <a href="<?= base_url('owner/checklist/' . $participant['id']) ?>" class="btn btn-outline-success btn-sm rounded-pill">
                                     <i class="bi bi-patch-check me-1"></i> Verifikasi Jamaah
                                 </a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -96,8 +105,8 @@ $isCancelled = ($participant['status'] ?? '') === 'cancelled';
                                 <a href="<?= base_url('owner/participant/add-payment/' . $participant['id']) ?>" class="btn btn-primary btn-sm rounded-pill">
                                     <i class="bi bi-plus-circle me-1"></i> Tambah Pembayaran (Kantor)
                                 </a>
-                                <?php endif; ?>
                                 <a href="<?= base_url('owner/payment-verification?participant_id=' . (int)$participant['id'] . '&tab=pending') ?>" class="btn btn-outline-primary btn-sm rounded-pill">Verifikasi Pembayaran</a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

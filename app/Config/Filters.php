@@ -36,7 +36,7 @@ class Filters extends BaseConfig
     public array $globals = [
         'before' => [
             // 'honeypot',
-            'csrf' => ['except' => ['api/*', 'owner/agency/toggle-status/*']], // Aktifkan CSRF kecuali API & toggle agensi (token diregenerasi tiap request)
+            'csrf' => ['except' => ['api/*', 'owner/agency/toggle-status/*', 'owner/print-documents/leave-letter', 'owner/print-documents/recommendation-letter']], // + cetak surat izin/rekomendasi (target="_blank", cetak ulang tanpa error)
             // 'invalidchars',
         ],
         'after' => [

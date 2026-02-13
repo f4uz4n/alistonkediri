@@ -156,6 +156,32 @@
     </div>
 </div>
 
+<!-- Grafik Pembatalan & Pemberangkatan (mengikuti filter tanggal) -->
+<div class="row g-4 mb-5">
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
+            <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
+                <h5 class="fw-bold text-dark mb-0">Pembatalan</h5>
+                <small class="text-muted">Sesuai rentang tanggal filter</small>
+            </div>
+            <div class="card-body p-4">
+                <canvas id="cancellationChart" style="max-height: 280px;"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
+            <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
+                <h5 class="fw-bold text-dark mb-0">Pemberangkatan</h5>
+                <small class="text-muted">Sesuai rentang tanggal filter</small>
+            </div>
+            <div class="card-body p-4">
+                <canvas id="departureChart" style="max-height: 280px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row g-4">
     <!-- Latest Activity -->
     <div class="col-12 col-lg-7">
@@ -313,6 +339,64 @@ document.addEventListener('DOMContentLoaded', function() {
                     legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } }
                 },
                 cutout: '70%'
+            }
+        });
+    }
+
+    // 3. Pembatalan 3 bulan terakhir (Bar)
+    const cancelCtx = document.getElementById('cancellationChart')?.getContext('2d');
+    if(cancelCtx) {
+        const months = <?= json_encode($chart_months ?? []) ?>;
+        const cancelData = <?= json_encode($chart_cancellation ?? []) ?>;
+        new Chart(cancelCtx, {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Jumlah Pembatalan',
+                    data: cancelData,
+                    backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                    borderColor: '#dc3545',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // 4. Pemberangkatan 3 bulan terakhir (Bar)
+    const depCtx = document.getElementById('departureChart')?.getContext('2d');
+    if(depCtx) {
+        const months = <?= json_encode($chart_months ?? []) ?>;
+        const depData = <?= json_encode($chart_departure ?? []) ?>;
+        new Chart(depCtx, {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Jumlah Pemberangkatan',
+                    data: depData,
+                    backgroundColor: 'rgba(0, 166, 81, 0.7)',
+                    borderColor: '#00a651',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { grid: { display: false } }
+                }
             }
         });
     }

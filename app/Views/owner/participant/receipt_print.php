@@ -220,10 +220,10 @@
         </div>
         <div class="col-4 text-center">
             <div class="mb-5 pb-3">
-                <div class="info-label">Petugas Finance,</div>
+                <div class="info-label">Sekretaris/Bendahara,</div>
             </div>
             <div class="mt-4 pt-2">
-                <div class="h5 fw-bold mb-0"><?= session()->get('full_name') ?></div>
+                <div class="h5 fw-bold mb-0"><?= esc($nama_penandatangan ?? session()->get('full_name')) ?></div>
                 <div class="info-label">Aliston Tour & Travel</div>
             </div>
         </div>

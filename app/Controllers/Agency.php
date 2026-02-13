@@ -692,9 +692,14 @@ class Agency extends BaseController
             ->orderBy('payment_date', 'ASC')
             ->findAll();
 
+        $userModel = new \App\Models\UserModel();
+        $owner = $userModel->where('role', 'owner')->first();
+        $namaPenandatangan = !empty($owner['nama_sekretaris_bendahara']) ? $owner['nama_sekretaris_bendahara'] : ($owner['full_name'] ?? '—');
+
         $data = [
             'participant' => $participant,
             'payments' => $payments,
+            'nama_penandatangan' => $namaPenandatangan,
             'title' => 'Kwitansi Pendaftaran - ' . $participant['name'],
         ];
         return view('owner/participant/receipt_print', $data);
@@ -724,7 +729,7 @@ class Agency extends BaseController
 
         $userModel = new \App\Models\UserModel();
         $owner = $userModel->where('role', 'owner')->first();
-        $namaDirektur = $owner['full_name'] ?? '—';
+        $namaPenandatangan = !empty($owner['nama_sekretaris_bendahara']) ? $owner['nama_sekretaris_bendahara'] : ($owner['full_name'] ?? '—');
         $namaPt = $owner['company_name'] ?? '';
         $alamatPt = $owner['address'] ?? '';
         $companyLogo = !empty($owner['company_logo']) ? base_url($owner['company_logo']) : base_url('assets/img/logo_.png');
@@ -736,7 +741,7 @@ class Agency extends BaseController
         $data = [
             'participant' => $participant,
             'payment' => $payment,
-            'nama_direktur' => $namaDirektur,
+            'nama_penandatangan' => $namaPenandatangan,
             'nama_pt' => $namaPt,
             'alamat_pt' => $alamatPt,
             'company_logo_url' => $companyLogo,

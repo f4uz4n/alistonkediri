@@ -25,7 +25,7 @@ class ParticipantModel extends Model
         'emergency_phone', 'checklist',
         'hotel_upgrade_id', 'room_upgrade_id', 'upgrade_cost',
         'is_boarded', 'boarded_at',
-        'cancelled_at', 'refund_amount', 'cancellation_notes'
+        'cancelled_at', 'refund_amount', 'cancellation_notes', 'refund_rekening', 'refund_bank_name'
     ];
 
     // Dates

@@ -44,9 +44,17 @@
             <?= csrf_field() ?>
             <input type="hidden" name="participant_id" value="<?= $participant['id'] ?>">
             <div class="mb-3">
-                <label class="form-label fw-bold">Nominal Refund (Rp)</label>
+                <label class="form-label fw-bold">Nominal Refund (Rp) <span class="text-danger">*</span></label>
                 <input type="number" name="refund_amount" class="form-control form-control-lg" value="<?= (int) $default_refund ?>" min="0" step="0.01" required placeholder="0">
                 <div class="form-text">Default diisi otomatis. Admin dapat mengubah nominal refund.</div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">No. Rekening yang Ditransfer <span class="text-danger">*</span></label>
+                <input type="text" name="refund_rekening" class="form-control" value="<?= esc(old('refund_rekening', $participant['refund_rekening'] ?? '')) ?>" placeholder="Contoh: 1234567890" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Nama Bank</label>
+                <input type="text" name="refund_bank_name" class="form-control" value="<?= esc(old('refund_bank_name', $participant['refund_bank_name'] ?? '')) ?>" placeholder="Contoh: BCA, Mandiri">
             </div>
             <div class="mb-4">
                 <label class="form-label fw-bold">Catatan Pembatalan</label>

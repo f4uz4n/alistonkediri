@@ -5,6 +5,9 @@
     <div class="col-12">
         <h2 class="fw-800 text-dark mb-1">Verifikasi Pembayaran</h2>
         <p class="text-secondary mb-0">Kelola konfirmasi pembayaran dari Agency & Jamaah</p>
+        <?php if (!empty($nama_sekretaris_bendahara)): ?>
+        <p class="text-muted small mb-0 mt-1"><i class="bi bi-person-badge me-1"></i> Sekretaris/Bendahara: <strong><?= esc($nama_sekretaris_bendahara) ?></strong></p>
+        <?php endif; ?>
     </div>
 </div>
 
