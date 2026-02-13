@@ -37,10 +37,13 @@ class AgencyAdmin extends BaseController
 
         $agencies = $builder->orderBy('created_at', 'DESC')->findAll();
 
+        $security = config('Security');
         $data = [
             'agencies' => $agencies,
             'search' => $search,
-            'status' => $status
+            'status' => $status,
+            'csrf_token' => $this->request->getCookie($security->cookieName) ?? '',
+            'csrf_token_name' => $security->tokenName,
         ];
         return view('owner/agency/index', $data);
     }
@@ -109,10 +112,14 @@ class AgencyAdmin extends BaseController
             return $this->response->setJSON(['status' => 'error', 'message' => 'Agensi tidak ditemukan']);
         }
 
-        $newStatus = !$agency['is_active'];
-        $this->userModel->update($id, ['is_active' => $newStatus]);
+        $currentActive = (int) ($agency['is_active'] ?? 0);
+        $newStatus = $currentActive ? 0 : 1;
+        $updated = $this->userModel->update($id, ['is_active' => $newStatus]);
+        if (!$updated) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal memperbarui status']);
+        }
 
-        return $this->response->setJSON(['status' => 'success', 'new_status' => $newStatus]);
+        return $this->response->setJSON(['status' => 'success', 'new_status' => (bool) $newStatus]);
     }
 
     public function edit($id)

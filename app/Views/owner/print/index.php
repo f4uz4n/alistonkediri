@@ -30,17 +30,17 @@
                     <?= csrf_field() ?>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label fw-bold small">Nomor Surat</label>
-                            <input type="text" name="nomor_surat" class="form-control bg-light border-0" value="<?= esc(old('nomor_surat', $default_nomor_surat ?? '')) ?>" placeholder="053/ABW-KDR/IC/I/26">
+                            <label class="form-label fw-bold small">Nomor Surat <span class="text-danger">*</span></label>
+                            <input type="text" name="nomor_surat" class="form-control bg-light border-0" value="<?= esc(old('nomor_surat', $default_nomor_surat ?? '')) ?>" placeholder="053/ABW-KDR/IC/I/26" required>
                             <small class="text-muted">Default: urut/ABW-KDR/IC/bulan romawi/tahun</small>
                         </div>
                         <div class="col-6">
-                            <label class="form-label fw-bold small">Perihal</label>
-                            <input type="text" name="perihal" class="form-control bg-light border-0" value="<?= esc(old('perihal', $default_perihal ?? 'Permohonan Ijin Cuti')) ?>" placeholder="Permohonan Ijin Cuti">
+                            <label class="form-label fw-bold small">Perihal <span class="text-danger">*</span></label>
+                            <input type="text" name="perihal" class="form-control bg-light border-0" value="<?= esc(old('perihal', $default_perihal ?? 'Permohonan Ijin Cuti')) ?>" placeholder="Permohonan Ijin Cuti" required>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold small">Pilih Jamaah</label>
+                        <label class="form-label fw-bold small">Pilih Jamaah <span class="text-danger">*</span></label>
                         <select name="participant_id" class="form-select bg-light border-0" required>
                             <option value="">-- Pilih Jamaah --</option>
                             <?php foreach ($participants as $p): ?>
@@ -54,17 +54,17 @@
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label fw-bold small">Tanggal Ijin Dari</label>
+                            <label class="form-label fw-bold small">Tanggal Ijin Dari <span class="text-danger">*</span></label>
                             <input type="date" name="tanggal_dari" class="form-control bg-light border-0" value="<?= esc(old('tanggal_dari', '')) ?>" required>
                         </div>
                         <div class="col-6">
-                            <label class="form-label fw-bold small">Tanggal Ijin Sampai</label>
+                            <label class="form-label fw-bold small">Tanggal Ijin Sampai <span class="text-danger">*</span></label>
                             <input type="date" name="tanggal_sampai" class="form-control bg-light border-0" value="<?= esc(old('tanggal_sampai', '')) ?>" required>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold small">Tujuan Surat (di bawah "Kepada Yth.")</label>
-                        <textarea name="tujuan_surat" class="form-control bg-light border-0" rows="3" placeholder="Contoh:&#10;Dekan Fakultas Kedokteran Gigi&#10;Universitas Gadjah Mada&#10;Di Tempat"><?= esc(old('tujuan_surat', '')) ?></textarea>
+                        <label class="form-label fw-bold small">Tujuan Surat (di bawah "Kepada Yth.") <span class="text-danger">*</span></label>
+                        <textarea name="tujuan_surat" class="form-control bg-light border-0" rows="3" placeholder="Contoh:&#10;Dekan Fakultas Kedokteran Gigi&#10;Universitas Gadjah Mada&#10;Di Tempat" required><?= esc(old('tujuan_surat', '')) ?></textarea>
                         <small class="text-muted">Satu baris per baris (nama instansi / Di Tempat)</small>
                     </div>
                     <div class="row g-2 mb-3">

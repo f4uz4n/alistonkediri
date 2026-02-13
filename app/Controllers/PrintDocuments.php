@@ -35,8 +35,29 @@ class PrintDocuments extends BaseController
         }
 
         $participantId = $this->request->getPost('participant_id') ?: $this->request->getGet('participant_id');
+        $nomorSurat = trim($this->request->getPost('nomor_surat') ?: $this->request->getGet('nomor_surat') ?: '');
+        $perihal = trim($this->request->getPost('perihal') ?: $this->request->getGet('perihal') ?: '');
+        $tanggalDari = $this->request->getPost('tanggal_dari') ?: $this->request->getGet('tanggal_dari');
+        $tanggalSampai = $this->request->getPost('tanggal_sampai') ?: $this->request->getGet('tanggal_sampai');
+        $tujuanSurat = trim($this->request->getPost('tujuan_surat') ?: $this->request->getGet('tujuan_surat') ?: '');
+
         if (empty($participantId)) {
             return redirect()->to('owner/print-documents')->with('error', 'Pilih jamaah terlebih dahulu.');
+        }
+        if (empty($nomorSurat)) {
+            return redirect()->to('owner/print-documents')->with('error', 'Nomor surat wajib diisi.');
+        }
+        if (empty($perihal)) {
+            return redirect()->to('owner/print-documents')->with('error', 'Perihal wajib diisi.');
+        }
+        if (empty($tanggalDari)) {
+            return redirect()->to('owner/print-documents')->with('error', 'Tanggal izin dari wajib diisi.');
+        }
+        if (empty($tanggalSampai)) {
+            return redirect()->to('owner/print-documents')->with('error', 'Tanggal izin sampai wajib diisi.');
+        }
+        if (empty($tujuanSurat)) {
+            return redirect()->to('owner/print-documents')->with('error', 'Tujuan surat (Kepada Yth.) wajib diisi.');
         }
 
         $participant = $this->participantModel
@@ -62,20 +83,13 @@ class PrintDocuments extends BaseController
         $tanggalSkPerijinan = $owner['tanggal_sk_perijinan'] ?? '';
         $namaDirektur = $owner['full_name'] ?? '—';
 
-        // Input dari form: tujuan surat, label & isi program studi, label & isi fakultas
-        $tujuanSurat = $this->request->getPost('tujuan_surat') ?: $this->request->getGet('tujuan_surat') ?: '';
+        // Input dari form: label & isi program studi, label & isi fakultas (nomor/perihal/tanggal/tujuan sudah divalidasi di atas)
         $labelProgramStudi = $this->request->getPost('label_program_studi') ?: $this->request->getGet('label_program_studi') ?: 'Program Studi';
         $isiProgramStudi = $this->request->getPost('isi_program_studi') ?: $this->request->getGet('isi_program_studi') ?: '';
         $labelFakultas = $this->request->getPost('label_fakultas') ?: $this->request->getGet('label_fakultas') ?: 'Fakultas';
         $isiFakultas = $this->request->getPost('isi_fakultas') ?: $this->request->getGet('isi_fakultas') ?: '';
 
-        // Nomor surat & perihal (input user)
-        $nomorSurat = $this->request->getPost('nomor_surat') ?: $this->request->getGet('nomor_surat') ?: '';
-        $perihal = $this->request->getPost('perihal') ?: $this->request->getGet('perihal') ?: 'Permohonan Ijin Cuti';
-
         // Range tanggal ijin: dari input (tanggal_dari, tanggal_sampai)
-        $tanggalDari = $this->request->getPost('tanggal_dari') ?: $this->request->getGet('tanggal_dari');
-        $tanggalSampai = $this->request->getPost('tanggal_sampai') ?: $this->request->getGet('tanggal_sampai');
         if (!empty($tanggalDari) && !empty($tanggalSampai)) {
             $departureDate = strtotime($tanggalDari);
             $returnDate = strtotime($tanggalSampai);

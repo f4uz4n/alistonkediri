@@ -144,38 +144,55 @@
 </div>
 
 <script>
-document.querySelectorAll('.status-toggle').forEach(toggle => {
-    toggle.addEventListener('change', function() {
-        const agencyId = this.dataset.id;
-        const label = document.getElementById('label_' + agencyId);
-        const originalStatus = !this.checked;
+(function() {
+    var csrfToken = <?= json_encode($csrf_token ?? '') ?>;
+    var csrfTokenName = <?= json_encode($csrf_token_name ?? 'csrf_test_name') ?>;
 
-        const formData = new FormData();
-        // CI4 CSRF token if needed, usually handled globally if using forms, 
-        // but for fetch we can pass it if security is strict.
-        
-        fetch('<?= base_url('owner/agency/toggle-status/') ?>' + agencyId, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                label.innerText = data.new_status ? 'AKTIF' : 'NONAKTIF';
-                label.className = `fw-bold status-label ${data.new_status ? 'text-success' : 'text-danger'}`;
-            } else {
+    document.querySelectorAll('.status-toggle').forEach(function(toggle) {
+        toggle.addEventListener('change', function() {
+            var agencyId = this.dataset.id;
+            var label = document.getElementById('label_' + agencyId);
+            var originalStatus = !this.checked;
+
+            if (!csrfToken) {
                 this.checked = originalStatus;
-                alert('Gagal mengubah status: ' + data.message);
+                alert('Sesi keamanan tidak ditemukan. Silakan muat ulang halaman.');
+                return;
             }
-        })
-        .catch(error => {
-            this.checked = originalStatus;
-            console.error('Error:', error);
-            alert('Terjadi kesalahan sistem.');
+
+            fetch('<?= base_url('owner/agency/toggle-status/') ?>' + agencyId, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: csrfTokenName + '=' + encodeURIComponent(csrfToken)
+            })
+            .then(function(response) {
+                var contentType = response.headers.get('content-type');
+                if (contentType && contentType.indexOf('application/json') !== -1) {
+                    return response.json().then(function(data) { return { ok: response.ok, data: data }; });
+                }
+                return response.text().then(function(text) { return { ok: false, data: { status: 'error', message: 'Respons tidak valid' } }; });
+            })
+            .then(function(result) {
+                var data = result.data;
+                if (result.ok && data.status === 'success') {
+                    label.innerText = data.new_status ? 'AKTIF' : 'NONAKTIF';
+                    label.className = 'fw-bold status-label ' + (data.new_status ? 'text-success' : 'text-danger');
+                } else {
+                    toggle.checked = originalStatus;
+                    alert('Gagal mengubah status: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(function(error) {
+                toggle.checked = originalStatus;
+                console.error('Error:', error);
+                alert('Terjadi kesalahan sistem. Pastikan Anda masih login.');
+            });
         });
     });
-});
+})();
 </script>
 <?= $this->endSection() ?>
