@@ -127,9 +127,9 @@
                                 </td>
                                 <td class="pe-4 text-end">
                                     <div class="d-flex justify-content-end gap-1 flex-wrap">
-                                        <a href="<?= base_url('owner/payment-verification?participant_id=' . (int)$part['id'] . '&tab=pending') ?>" 
+                                        <a href="<?= base_url('owner/participant/kelola/' . (int)$part['id']) ?>" 
                                            class="btn btn-success btn-sm rounded-pill px-3 d-flex align-items-center"
-                                           title="Kelola (verifikasi pembayaran jamaah ini)">
+                                           title="Kelola (jadwal, hotel, kamar, verifikasi pembayaran, dll)">
                                             <i class="bi bi-gear-fill me-1"></i> Kelola
                                         </a>
                                         <button type="button" class="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center btn-history" style="width: 32px; height: 32px;" data-id="<?= $part['id'] ?>" data-name="<?= esc($part['name']) ?>" title="Riwayat Pembayaran"><i class="bi bi-clock-history"></i></button>

@@ -18,7 +18,7 @@
     <div class="col-12">
         <div class="card border-0 shadow-sm rounded-4 bg-white">
             <div class="card-body p-4">
-                <form action="<?= base_url('owner/report') ?>" method="get">
+                <form action="<?= base_url('owner/reports') ?>" method="get">
                     <div class="row align-items-end g-3">
                         <div class="col-12 col-md-4">
                             <label class="form-label small fw-bold text-secondary text-uppercase ls-1">Tanggal Mulai</label>
@@ -39,7 +39,7 @@
                                 <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold">
                                     <i class="bi bi-filter me-2"></i>Terapkan Filter
                                 </button>
-                                <a href="<?= base_url('owner/report') ?>" class="btn btn-light rounded-pill fw-bold border">
+                                <a href="<?= base_url('owner/reports') ?>" class="btn btn-light rounded-pill fw-bold border">
                                     Reset
                                 </a>
                             </div>
@@ -177,8 +177,13 @@
     <!-- Pendaftaran Terbaru (Footer) -->
     <div class="col-12">
         <div class="card border-0 shadow-sm rounded-4 bg-white">
-            <div class="card-header bg-transparent border-0 py-4 px-4 border-bottom">
+            <div class="card-header bg-transparent border-0 py-4 px-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h5 class="fw-bold text-dark mb-0">Riwayat Pendaftaran Terbaru</h5>
+                <?php
+                $exportQuery = array_filter(['start_date' => $start_date ?? '', 'end_date' => $end_date ?? '']);
+                $exportUrl = base_url('owner/reports/registrations-export') . (empty($exportQuery) ? '' : '?' . http_build_query($exportQuery));
+                ?>
+                <a href="<?= esc($exportUrl) ?>" class="btn btn-success btn-sm rounded-pill px-3" title="Export riwayat pendaftaran ke Excel"><i class="bi bi-file-earmark-excel me-1"></i> Cetak Excel</a>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">

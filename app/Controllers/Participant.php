@@ -817,6 +817,69 @@ class Participant extends BaseController
         return view('owner/participant/boarding_list_print', $data);
     }
 
+    /**
+     * Export daftar jamaah boarding ke Excel (CSV) sesuai filter.
+     */
+    public function boardingListExport()
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+        $packageId = $this->request->getGet('package_id');
+        $departureFrom = $this->request->getGet('departure_date_from');
+        $departureTo = $this->request->getGet('departure_date_to');
+
+        $builder = $this->participantModel
+            ->select('participants.*, travel_packages.name as package_name, travel_packages.departure_date, travel_packages.airline, users.full_name as agency_name')
+            ->join('travel_packages', 'travel_packages.id = participants.package_id')
+            ->join('users', 'users.id = participants.agency_id')
+            ->where('participants.status !=', 'cancelled')
+            ->orderBy('travel_packages.departure_date', 'ASC')
+            ->orderBy('participants.name', 'ASC');
+
+        if ($packageId) {
+            $builder->where('participants.package_id', $packageId);
+        }
+        if ($departureFrom) {
+            $builder->where('DATE(travel_packages.departure_date) >=', $departureFrom);
+        }
+        if ($departureTo) {
+            $builder->where('DATE(travel_packages.departure_date) <=', $departureTo);
+        }
+
+        $participants = $builder->findAll();
+
+        $filename = 'daftar-boarding-jamaah-' . date('Y-m-d-His') . '.csv';
+        $out = fopen('php://temp', 'r+');
+        fprintf($out, "\xEF\xBB\xBF"); // UTF-8 BOM agar Excel baca benar
+
+        $headers = ['No', 'Tanggal Berangkat', 'Maskapai', 'Nama Jamaah', 'NIK', 'Agensi', 'Paket', 'Telepon', 'Status Boarding'];
+        fputcsv($out, $headers, ';');
+
+        foreach ($participants as $i => $p) {
+            $row = [
+                $i + 1,
+                !empty($p['departure_date']) ? date('d/m/Y', strtotime($p['departure_date'])) : '',
+                $p['airline'] ?? '',
+                $p['name'] ?? '',
+                $p['nik'] ?? '',
+                $p['agency_name'] ?? '',
+                $p['package_name'] ?? '',
+                $p['phone'] ?? '',
+                !empty($p['is_boarded']) ? 'Boarding' : 'Belum',
+            ];
+            fputcsv($out, $row, ';');
+        }
+        rewind($out);
+        $csv = stream_get_contents($out);
+        fclose($out);
+
+        return $this->response
+            ->setHeader('Content-Type', 'text/csv; charset=UTF-8')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+            ->setBody($csv);
+    }
+
     public function boardingManifest($packageId)
     {
         if (session()->get('role') != 'owner') {

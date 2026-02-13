@@ -41,19 +41,20 @@
             <div class="col-auto">
                 <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3"><i class="bi bi-funnel me-1"></i> Filter</button>
                 <a href="<?= base_url('owner/participant/boarding-list') ?>" class="btn btn-outline-secondary btn-sm rounded-pill px-3">Reset</a>
+                <?php
+                $exportQuery = array_filter([
+                    'package_id' => $selected_package ?? '',
+                    'departure_date_from' => $departure_date_from ?? '',
+                    'departure_date_to' => $departure_date_to ?? '',
+                ]);
+                $exportUrl = base_url('owner/participant/boarding-list-export') . (empty($exportQuery) ? '' : '?' . http_build_query($exportQuery));
+                ?>
+                <a href="<?= esc($exportUrl) ?>" class="btn btn-success btn-sm rounded-pill px-3" title="Cetak/Export daftar jamaah ke Excel"><i class="bi bi-file-earmark-excel me-1"></i> Cetak Excel</a>
             </div>
         </form>
     </div>
 </div>
 
-<?php
-        $printQuery = array_filter([
-            'package_id' => $selected_package ?? '',
-            'departure_date_from' => $departure_date_from ?? '',
-            'departure_date_to' => $departure_date_to ?? '',
-        ]);
-        $printUrl = base_url('owner/participant/boarding-list-print') . (empty($printQuery) ? '' : '?' . http_build_query($printQuery));
-        ?>
 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
@@ -64,7 +65,6 @@
                     <th class="border-0 py-3">Nama Jamaah</th>
                     <th class="border-0 py-3">Agensi</th>
                     <th class="border-0 py-3">Paket</th>
-                    <th class="border-0 py-3 text-center">Berkas</th>
                     <th class="border-0 py-3 text-center">Pembayaran</th>
                     <th class="border-0 py-3 text-center">H-</th>
                     <th class="border-0 py-3 text-center">Status</th>
@@ -73,7 +73,7 @@
             </thead>
             <tbody>
                 <?php if (empty($participants)): ?>
-                <tr><td colspan="10" class="text-center py-5 text-muted">Tidak ada data jamaah.</td></tr>
+                <tr><td colspan="9" class="text-center py-5 text-muted">Tidak ada data jamaah.</td></tr>
                 <?php else: ?>
                 <?php foreach ($participants as $p): ?>
                 <tr>
@@ -82,13 +82,6 @@
                     <td><strong><?= esc($p['name']) ?></strong><br><small class="text-muted"><?= esc($p['nik'] ?? '') ?></small></td>
                     <td class="small"><?= esc($p['agency_name'] ?? '—') ?></td>
                     <td class="small"><?= esc($p['package_name'] ?? '—') ?></td>
-                    <td class="text-center">
-                        <?php if ($p['berkas_lengkap']): ?>
-                            <span class="badge bg-success rounded-pill">Lengkap</span>
-                        <?php else: ?>
-                            <span class="badge bg-warning text-dark rounded-pill"><?= $p['doc_progress'] ?>%</span>
-                        <?php endif; ?>
-                    </td>
                     <td class="text-center">
                         <?php if ($p['pembayaran_lunas']): ?>
                             <span class="badge bg-success rounded-pill">Lunas</span>
@@ -124,7 +117,6 @@
                         <?php else: ?>
                         <span class="text-muted small">—</span>
                         <?php endif; ?>
-                        <a href="<?= esc($printUrl) ?>" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill ms-1" title="Cetak Daftar Jamaah"><i class="bi bi-printer"></i></a>
                     </td>
                 </tr>
                 <?php endforeach; ?>

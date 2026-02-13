@@ -96,6 +96,7 @@ $routes->group('owner', ['filter' => 'auth:owner'], function ($routes) {
             $routes->get('boarding', 'Participant::boarding');
             $routes->get('boarding-list', 'Participant::boardingList');
             $routes->get('boarding-list-print', 'Participant::boardingListPrint');
+            $routes->get('boarding-list-export', 'Participant::boardingListExport');
             $routes->post('process-boarding', 'Participant::processBoarding');
             $routes->post('confirm-boarding', 'Participant::confirmBoarding');
             $routes->get('boarding-manifest/(:num)', 'Participant::boardingManifest/$1');
@@ -129,6 +130,7 @@ $routes->group('owner', ['filter' => 'auth:owner'], function ($routes) {
         // Reports
         $routes->get('reports', 'Reports::index');
         $routes->get('reports/equipment', 'Reports::equipment');
+        $routes->get('reports/registrations-export', 'Reports::registrationsExport');
 
         // Account Settings
         $routes->get('settings', 'Owner::settings');

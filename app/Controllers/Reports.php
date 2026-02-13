@@ -71,6 +71,55 @@ class Reports extends BaseController
         return view('owner/report/index', $data);
     }
 
+    /**
+     * Export riwayat pendaftaran terbaru ke Excel (CSV) sesuai filter tanggal.
+     */
+    public function registrationsExport()
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+
+        $startDate = $this->request->getGet('start_date') ?: date('Y-m-d', strtotime('-6 months'));
+        $endDate = $this->request->getGet('end_date') ?: date('Y-m-d');
+
+        $participantModel = new ParticipantModel();
+        $filterDate = function ($query) use ($startDate, $endDate) {
+            return $query->where('participants.created_at >=', $startDate . ' 00:00:00')
+                ->where('participants.created_at <=', $endDate . ' 23:59:59');
+        };
+
+        $rows = $filterDate($participantModel->getParticipantBuilder())->findAll();
+
+        $filename = 'riwayat-pendaftaran-' . date('Y-m-d-His') . '.csv';
+        $out = fopen('php://temp', 'r+');
+        fprintf($out, "\xEF\xBB\xBF");
+
+        $headers = ['No', 'Jamaah', 'NIK', 'Agensi', 'Paket', 'Status', 'Tanggal Daftar'];
+        fputcsv($out, $headers, ';');
+
+        foreach ($rows as $i => $reg) {
+            $row = [
+                $i + 1,
+                $reg['name'] ?? '',
+                $reg['nik'] ?? '',
+                $reg['agency_name'] ?? '',
+                $reg['package_name'] ?? '',
+                strtoupper($reg['status'] ?? ''),
+                !empty($reg['created_at']) ? date('d/m/Y H:i', strtotime($reg['created_at'])) : '',
+            ];
+            fputcsv($out, $row, ';');
+        }
+        rewind($out);
+        $csv = stream_get_contents($out);
+        fclose($out);
+
+        return $this->response
+            ->setHeader('Content-Type', 'text/csv; charset=UTF-8')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+            ->setBody($csv);
+    }
+
     public function equipment()
     {
         if (session()->get('role') != 'owner') {
