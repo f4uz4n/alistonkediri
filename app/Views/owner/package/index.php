@@ -2,6 +2,12 @@
 
 <?= $this->section('content') ?>
 <?php helper('package'); ?>
+<?php if (session()->getFlashdata('msg')): ?>
+    <div class="alert alert-success border-0 shadow-sm rounded-4 mb-4"><?= session()->getFlashdata('msg') ?></div>
+<?php endif; ?>
+<?php if (session()->getFlashdata('error')): ?>
+    <div class="alert alert-danger border-0 shadow-sm rounded-4 mb-4"><?= session()->getFlashdata('error') ?></div>
+<?php endif; ?>
 <div class="row align-items-center mb-5">
     <div class="col-12 col-md-6">
         <h2 class="fw-800 text-dark mb-1">Paket Perjalanan</h2>
@@ -35,16 +41,25 @@
             </div>
         </div>
     <?php else: ?>
-        <?php foreach($packages as $package): ?>
+        <?php foreach($packages as $package): 
+            $depDate = isset($package['departure_date']) ? substr((string)$package['departure_date'], 0, 10) : '';
+            $isExpired = ($depDate !== '' && $depDate < date('Y-m-d'));
+        ?>
         <div class="col-12 col-lg-6">
-            <div class="card border-0 shadow-sm h-100 rounded-4 overflow-hidden bg-white">
+            <div class="card border-0 shadow-sm h-100 rounded-4 overflow-hidden bg-white <?= empty($package['is_active']) && !$isExpired ? 'opacity-90' : '' ?>">
                 <div class="position-relative">
-                    <?php if($package['image']): ?>
-                        <div style="height: 200px; background: url('<?= base_url($package['image']) ?>') center/cover no-repeat;"></div>
+                    <?php if ($package['image']): ?>
+                        <a href="<?= base_url($package['image']) ?>" target="_blank" rel="noopener noreferrer" class="d-block text-decoration-none" title="Preview gambar">
+                            <div style="height: 200px; background: url('<?= base_url($package['image']) ?>') center/cover no-repeat;" class="package-card-img"></div>
+                        </a>
                     <?php else: ?>
                         <div style="height: 100px; background: linear-gradient(135deg, var(--primary-color) 0%, #ff7675 100%);"></div>
                     <?php endif; ?>
-                    
+                    <?php if ($isExpired): ?>
+                        <span class="position-absolute top-0 end-0 m-2 badge bg-dark rounded-pill px-3 py-2 shadow-sm">Expired</span>
+                    <?php elseif (empty($package['is_active'])): ?>
+                        <span class="position-absolute top-0 end-0 m-2 badge bg-secondary rounded-pill px-3 py-2 shadow-sm">Kuota Penuh</span>
+                    <?php endif; ?>
                     <div class="position-absolute top-100 start-0 translate-middle-y ps-4 w-100 d-flex justify-content-between pe-4">
                         <div class="bg-white rounded-circle shadow-sm p-3 border d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                             <img src="<?= get_company_logo() ?>" alt="Logo" style="width: 35px;">
@@ -128,11 +143,40 @@
                             </ul>
                         </div>
                     </div>
+                    <?php 
+                        $excls = json_decode($package['exclusions'] ?? '[]', true);
+                        if (is_array($excls) && count($excls) > 0): 
+                    ?>
+                    <div class="row g-4 mb-4">
+                        <div class="col-12">
+                            <h6 class="fw-bold text-dark small text-uppercase mb-2"><i class="bi bi-x-circle text-secondary me-2"></i>Belum Termasuk:</h6>
+                            <ul class="list-unstyled mb-0" style="font-size: 0.8rem;">
+                                <?php foreach (array_slice($excls, 0, 5) as $ex): ?>
+                                    <li class="text-secondary mb-1">× <?= esc($ex) ?></li>
+                                <?php endforeach; ?>
+                                <?php if (count($excls) > 5): ?><li class="text-primary fw-bold mt-1">+<?= count($excls) - 5 ?> lainnya...</li><?php endif; ?>
+                            </ul>
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
-                    <div class="d-flex gap-2 pt-3 border-top">
+                    <?php if (!$isExpired): ?>
+                    <div class="d-flex flex-wrap gap-2 pt-3 border-top">
                         <a href="<?= base_url('package/edit/'.$package['id']) ?>" class="btn btn-light rounded-pill px-4 fw-bold border">
                             <i class="bi bi-pencil-square me-2"></i>Edit
                         </a>
+                        <form action="<?= base_url('package/toggle-status/'.$package['id']) ?>" method="post" class="d-inline">
+                            <?= csrf_field() ?>
+                            <?php if (!empty($package['is_active'])): ?>
+                                <button type="submit" class="btn btn-outline-warning rounded-pill px-3 fw-bold border py-2" title="Tandai kuota penuh">
+                                    <i class="bi bi-person-x me-1"></i>Tandai Kuota Penuh
+                                </button>
+                            <?php else: ?>
+                                <button type="submit" class="btn btn-outline-success rounded-pill px-3 fw-bold border py-2" title="Buka kembali pendaftaran">
+                                    <i class="bi bi-person-check me-1"></i>Buka Kembali
+                                </button>
+                            <?php endif; ?>
+                        </form>
                         <button type="button" class="btn btn-light text-danger rounded-pill flex-grow-1 border py-2 fw-bold btn-delete-package"
                            data-bs-toggle="modal" data-bs-target="#modalHapusPaket"
                            data-package-id="<?= (int)$package['id'] ?>"
@@ -141,6 +185,11 @@
                             <i class="bi bi-trash me-1"></i>Hapus Paket
                         </button>
                     </div>
+                    <?php else: ?>
+                    <div class="pt-3 border-top">
+                        <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i>Tanggal keberangkatan telah lewat. Edit dan hapus tidak tersedia.</p>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -161,12 +210,13 @@
                 <p class="text-muted small mb-4">
                     Jika paket dihapus, <strong>semua data terkait</strong> (pendaftaran jamaah, pembayaran, dokumen, dll.) akan terpengaruh. Tindakan ini <strong>tidak dapat dibatalkan</strong>.
                 </p>
-                <div class="d-flex gap-2 justify-content-center flex-wrap">
+                <form id="formHapusPaket" method="post" action="" class="d-flex gap-2 justify-content-center flex-wrap">
+                    <?= csrf_field() ?>
                     <button type="button" class="btn btn-light rounded-pill px-4 fw-bold border" data-bs-dismiss="modal">Batal</button>
-                    <a href="#" id="btnConfirmHapusPaket" class="btn btn-danger rounded-pill px-4 fw-bold">
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">
                         <i class="bi bi-trash me-1"></i>Ya, Hapus Paket
-                    </a>
-                </div>
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -176,17 +226,16 @@
 (function() {
     var modal = document.getElementById('modalHapusPaket');
     if (!modal) return;
-    var bsModal = new bootstrap.Modal(modal);
-    var btnConfirm = document.getElementById('btnConfirmHapusPaket');
+    var formHapus = document.getElementById('formHapusPaket');
     var labelNama = document.getElementById('modalHapusPaketNama');
 
     modal.addEventListener('show.bs.modal', function(e) {
         var btn = e.relatedTarget;
         if (btn && btn.classList.contains('btn-delete-package')) {
             var nama = btn.getAttribute('data-package-name') || 'Paket ini';
-            var url = btn.getAttribute('data-delete-url') || '#';
+            var url = btn.getAttribute('data-delete-url') || '';
             labelNama.textContent = nama;
-            btnConfirm.setAttribute('href', url);
+            if (formHapus) formHapus.action = url;
         }
     });
 })();

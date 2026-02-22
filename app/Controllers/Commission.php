@@ -129,7 +129,7 @@ class Commission extends BaseController
         }
 
         $owner = $this->userModel->find(session()->get('id'));
-        $namaDirektur = $owner['full_name'] ?? session()->get('username') ?? '—';
+        $namaDirektur = !empty($owner['nama_sekretaris_bendahara']) ? $owner['nama_sekretaris_bendahara'] : ($owner['full_name'] ?? session()->get('username') ?? '—');
         $namaPt = $owner['company_name'] ?? '';
         $companyLogo = !empty($owner['company_logo']) ? base_url($owner['company_logo']) : base_url('assets/img/logo_.png');
 

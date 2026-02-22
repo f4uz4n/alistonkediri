@@ -17,7 +17,7 @@ class PackageModel extends Model
         'hotel_mekkah', 'hotel_mekkah_stars', 'hotel_mekkah_id',
         'hotel_madinah', 'hotel_madinah_stars', 'hotel_madinah_id',
         'airline', 'flight_route', 'price', 'price_unit', 'commission_per_pax',
-        'inclusions', 'freebies', 'branch_info'
+        'inclusions', 'freebies', 'exclusions', 'branch_info', 'is_active'
     ];
 
     // Dates

@@ -20,7 +20,7 @@ class Home extends BaseController
         $articleModel = new ArticleModel();
 
         $today = date('Y-m-d');
-        $allActive = $packageModel->where('departure_date >=', $today)->orderBy('departure_date', 'ASC')->findAll();
+        $allActive = $packageModel->where('is_active', 1)->where('departure_date >=', $today)->orderBy('departure_date', 'ASC')->findAll();
 
         $kategori = $this->request->getGet('kategori');
         $durasi = $this->request->getGet('durasi');
@@ -112,6 +112,9 @@ class Home extends BaseController
         $pkg = $packageModel->find($id);
         if (!$pkg) {
             return redirect()->to('/')->with('error', 'Paket tidak ditemukan.');
+        }
+        if (empty($pkg['is_active'])) {
+            return redirect()->to('/')->with('error', 'Paket tidak tersedia (nonaktif atau sudah berakhir).');
         }
         $today = date('Y-m-d');
         $dep = $pkg['departure_date'] ?? '';

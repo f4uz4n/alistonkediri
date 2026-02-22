@@ -148,6 +148,10 @@
                                 <label class="form-label small fw-bold text-secondary">Foto KTP</label>
                                 <input type="file" name="id_card" class="form-control form-control-sm bg-light" accept="image/*">
                             </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">Upload KK</label>
+                                <input type="file" name="kk" class="form-control form-control-sm bg-light" accept="image/*">
+                            </div>
                             <div>
                                 <label class="form-label small fw-bold text-secondary">Kartu Vaksin</label>
                                 <input type="file" name="vaccine" class="form-control form-control-sm bg-light" accept="image/*">

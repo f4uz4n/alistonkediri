@@ -127,6 +127,11 @@
                                 </td>
                                 <td class="pe-4 text-end">
                                     <div class="d-flex justify-content-end gap-1 flex-wrap">
+                                        <a href="<?= base_url('owner/participant/edit/' . (int)$part['id']) ?>" 
+                                           class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center"
+                                           title="Edit data jamaah">
+                                            <i class="bi bi-pencil-square me-1"></i> Edit Jamaah
+                                        </a>
                                         <a href="<?= base_url('owner/participant/kelola/' . (int)$part['id']) ?>" 
                                            class="btn btn-success btn-sm rounded-pill px-3 d-flex align-items-center"
                                            title="Kelola (jadwal, hotel, kamar, verifikasi pembayaran, dll)">

@@ -99,6 +99,23 @@
                         </ul>
                     </div>
                 </div>
+                <?php 
+                    $excls = json_decode($package['exclusions'] ?? '[]', true);
+                    if (is_array($excls) && !empty($excls)): 
+                ?>
+                <div class="row g-4 mt-2">
+                    <div class="col-12">
+                        <h6 class="fw-bold text-dark mb-3">Belum Termasuk:</h6>
+                        <ul class="list-unstyled mb-0">
+                            <?php foreach ($excls as $ex): ?>
+                            <li class="text-secondary mb-2 d-flex align-items-center">
+                                <i class="bi bi-x-circle text-secondary me-2 small"></i> <?= esc($ex) ?>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>

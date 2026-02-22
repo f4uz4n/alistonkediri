@@ -118,6 +118,7 @@
                                     </td>
                                     <td class="text-center">
                                         <form action="<?= base_url('owner/equipment/update-status') ?>" method="post" id="form-status-<?= $item['id'] ?>">
+                                            <?= csrf_field() ?>
                                             <input type="hidden" name="id" value="<?= $item['id'] ?>">
                                             <select name="status" class="form-select form-select-sm rounded-pill border-0 shadow-sm px-3 fw-bold <?= $item['status'] == 'collected' ? 'bg-success-soft text-success' : 'bg-warning-soft text-warning' ?>" onchange="document.getElementById('form-status-<?= $item['id'] ?>').submit()" style="min-width: 140px;">
                                                 <option value="pending" <?= $item['status'] == 'pending' ? 'selected' : '' ?>>Belum Diambil</option>

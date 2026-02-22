@@ -107,6 +107,7 @@
                             <select name="types[]" class="form-select form-select-lg bg-white border-0 rounded-3 shadow-sm" required>
                                 <option value="passport">Paspor</option>
                                 <option value="id_card">KTP</option>
+                                <option value="kk">KK</option>
                                 <option value="vaccine">Kartu Vaksin</option>
                                 <option value="visa">Visa</option>
                                 <option value="vaccine_meningitis">Vaksin Meningitis</option>

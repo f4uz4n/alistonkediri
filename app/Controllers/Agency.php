@@ -427,7 +427,7 @@ class Agency extends BaseController
     {
         $packageModel = new \App\Models\PackageModel();
         $labels = $this->getPackageCityLabelsForAgency();
-        $packages = $packageModel->findAll();
+        $packages = $packageModel->orderBy('departure_date', 'DESC')->findAll();
         foreach ($packages as &$p) {
             $this->enrichPackageWithHotelMaster($p);
         }
@@ -447,6 +447,9 @@ class Agency extends BaseController
         if (!$package) {
             return redirect()->to('agency/packages')->with('error', 'Paket tidak ditemukan');
         }
+        if (empty($package['is_active'])) {
+            return redirect()->to('agency/packages')->with('error', 'Paket tidak tersedia (nonaktif atau sudah berakhir).');
+        }
 
         $this->enrichPackageWithHotelMaster($package);
         $labels = $this->getPackageCityLabelsForAgency();
@@ -465,6 +468,13 @@ class Agency extends BaseController
 
         if (!$package) {
             return redirect()->to('agency/packages')->with('error', 'Paket tidak ditemukan');
+        }
+        if (empty($package['is_active'])) {
+            return redirect()->to('agency/packages')->with('error', 'Paket tidak tersedia (kuota penuh).');
+        }
+        $depDate = isset($package['departure_date']) ? substr((string)$package['departure_date'], 0, 10) : '';
+        if ($depDate !== '' && $depDate < date('Y-m-d')) {
+            return redirect()->to('agency/packages')->with('error', 'Paket sudah expired (tanggal keberangkatan telah lewat).');
         }
 
         $data = [
@@ -495,6 +505,20 @@ class Agency extends BaseController
 
         if (!$this->validate($rules)) {
             return redirect()->back()->withInput()->with('error', 'Mohon lengkapi seluruh biodata wajib sesuai KTP.');
+        }
+
+        $packageId = (int) $this->request->getPost('package_id');
+        $packageModel = new \App\Models\PackageModel();
+        $package = $packageModel->find($packageId);
+        if (!$package) {
+            return redirect()->back()->withInput()->with('error', 'Paket tidak ditemukan.');
+        }
+        if (empty($package['is_active'])) {
+            return redirect()->back()->withInput()->with('error', 'Paket tidak dapat menerima pendaftaran (kuota penuh).');
+        }
+        $depDate = isset($package['departure_date']) ? substr((string)$package['departure_date'], 0, 10) : '';
+        if ($depDate !== '' && $depDate < date('Y-m-d')) {
+            return redirect()->back()->withInput()->with('error', 'Paket sudah expired. Tidak dapat mendaftarkan jamaah.');
         }
 
         $passportNumber = trim($this->request->getPost('passport_number') ?? '');
@@ -545,7 +569,7 @@ class Agency extends BaseController
         $participantId = $participantModel->insert($participantData);
 
         // Handle Document Uploads
-        $docTypes = ['passport', 'id_card', 'vaccine'];
+        $docTypes = ['passport', 'id_card', 'kk', 'vaccine'];
         foreach ($docTypes as $type) {
             $file = $this->request->getFile($type);
             if ($file && $file->isValid() && !$file->hasMoved()) {
@@ -881,7 +905,7 @@ class Agency extends BaseController
         $participantModel->update($id, $participantData);
 
         // Handle Document Revisions
-        $docTypes = ['passport', 'id_card', 'vaccine'];
+        $docTypes = ['passport', 'id_card', 'kk', 'vaccine'];
         foreach ($docTypes as $type) {
             $file = $this->request->getFile($type);
             if ($file && $file->isValid() && !$file->hasMoved()) {
@@ -938,7 +962,7 @@ class Agency extends BaseController
     {
         $participantModel = new \App\Models\ParticipantModel();
         $participant = $participantModel
-            ->select('participants.*, travel_packages.name as package_name, travel_packages.price as package_price, travel_packages.departure_date as package_departure_date, travel_packages.freebies as package_freebies, travel_packages.inclusions as package_inclusions, travel_packages.hotel_mekkah_id, travel_packages.hotel_madinah_id, users.full_name as agency_name, travel_hotels.name as hotel_upgrade_name, travel_hotel_rooms.name as room_upgrade_name, travel_hotel_rooms.type as room_upgrade_type')
+            ->select('participants.*, travel_packages.name as package_name, travel_packages.price as package_price, travel_packages.departure_date as package_departure_date, travel_packages.freebies as package_freebies, travel_packages.inclusions as package_inclusions, travel_packages.exclusions as package_exclusions, travel_packages.hotel_mekkah_id, travel_packages.hotel_madinah_id, users.full_name as agency_name, travel_hotels.name as hotel_upgrade_name, travel_hotel_rooms.name as room_upgrade_name, travel_hotel_rooms.type as room_upgrade_type')
             ->join('travel_packages', 'travel_packages.id = participants.package_id')
             ->join('users', 'users.id = participants.agency_id')
             ->join('travel_hotels', 'travel_hotels.id = participants.hotel_upgrade_id', 'left')
@@ -990,6 +1014,7 @@ class Agency extends BaseController
 
         $freebies = json_decode($participant['package_freebies'] ?? '[]', true) ?? [];
         $inclusions = json_decode($participant['package_inclusions'] ?? '[]', true) ?? [];
+        $exclusions = json_decode($participant['package_exclusions'] ?? '[]', true) ?? [];
 
         $tanggalSignature = date('d/m/Y H:i');
         $qrData = 'REG#' . $id . '#' . $participant['nik'] . '#' . $tanggalSignature;
@@ -1002,6 +1027,7 @@ class Agency extends BaseController
             'total_target' => $totalTarget,
             'freebies' => $freebies,
             'inclusions' => $inclusions,
+            'exclusions' => $exclusions,
             'hotels_package' => $hotelsPackage,
             'master_attributes' => $masterAttributes,
             'collected_map' => $collectedMap,
@@ -1012,6 +1038,7 @@ class Agency extends BaseController
             'tanggal_signature' => $tanggalSignature,
             'qr_url' => $qrUrl,
             'title' => 'Formulir Pendaftaran - ' . $participant['name'],
+            'back_url' => base_url('agency/participants'),
         ];
         return view('owner/participant/registration_form_print', $data);
     }
@@ -1062,13 +1089,13 @@ class Agency extends BaseController
         $docModel = new \App\Models\DocumentModel();
         $uploadedCount = 0;
 
-        // Semua jenis dari form; untuk DB hanya passport, id_card, vaccine, other (sisanya simpan sebagai other + label di title)
+        // Semua jenis dari form; untuk DB hanya passport, id_card, vaccine, kk, other (sisanya simpan sebagai other + label di title)
         $typeLabels = [
-            'passport' => 'Paspor', 'id_card' => 'KTP', 'vaccine' => 'Kartu Vaksin',
+            'passport' => 'Paspor', 'id_card' => 'KTP', 'kk' => 'KK', 'vaccine' => 'Kartu Vaksin',
             'visa' => 'Visa', 'vaccine_meningitis' => 'Vaksin Meningitis', 'vaccine_covid' => 'Vaksin Covid',
             'insurance' => 'Asuransi', 'ticket' => 'Tiket', 'photo' => 'Pas Foto 4x6', 'other' => 'Lainnya',
         ];
-        $singleTypes = ['passport', 'id_card', 'vaccine'];
+        $singleTypes = ['passport', 'id_card', 'kk', 'vaccine'];
 
         foreach ($files as $index => $file) {
             if ($file->isValid() && !$file->hasMoved()) {
@@ -1112,7 +1139,7 @@ class Agency extends BaseController
         }
 
         $db = \Config\Database::connect();
-        $docTypes = ['passport', 'id_card', 'vaccine'];
+        $docTypes = ['passport', 'id_card', 'kk', 'vaccine'];
         foreach ($docTypes as $type) {
             $file = $this->request->getFile($type);
             if ($file && $file->isValid() && !$file->hasMoved()) {

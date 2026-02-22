@@ -103,13 +103,17 @@
                 </div>
                 <div class="card-body p-4 p-md-5">
                     <div class="row g-4">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label fw-bold small text-uppercase text-secondary ls-1 mb-2">Sudah Termasuk (Satu per baris)</label>
                             <textarea name="inclusions" class="form-control bg-light border-0" rows="8" placeholder="Tiket Pesawat PP&#10;Visa Umroh..."></textarea>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label fw-bold small text-uppercase text-secondary ls-1 mb-2">Gratis / Free (Satu per baris)</label>
                             <textarea name="freebies" class="form-control bg-light border-0" rows="8" placeholder="City Tour Thaif..."></textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-uppercase text-secondary ls-1 mb-2">Belum Termasuk (Satu per baris)</label>
+                            <textarea name="exclusions" class="form-control bg-light border-0" rows="8" placeholder="Biaya keperluan pribadi&#10;Asuransi perjalanan opsional..."></textarea>
                         </div>
                     </div>
                 </div>

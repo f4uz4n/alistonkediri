@@ -79,6 +79,8 @@ $routes->group('owner', ['filter' => 'auth:owner'], function ($routes) {
         $routes->group('participant', function ($routes) {
             $routes->get('/', 'Participant::index');
             $routes->get('kelola/(:num)', 'Participant::kelola/$1');
+            $routes->get('edit/(:num)', 'Participant::editParticipant/$1');
+            $routes->post('update/(:num)', 'Participant::updateParticipant/$1');
             $routes->post('update-schedule', 'Participant::updateSchedule');
             $routes->get('documents', 'Participant::documents');
             $routes->get('documents/(:num)', 'Participant::documents/$1');
@@ -180,7 +182,8 @@ $routes->group('package', ['filter' => 'auth:owner'], function ($routes) {
     $routes->post('store', 'Package::store');
     $routes->get('edit/(:num)', 'Package::edit/$1');
     $routes->post('update/(:num)', 'Package::update/$1');
-    $routes->get('delete/(:num)', 'Package::delete/$1');
+    $routes->post('delete/(:num)', 'Package::delete/$1');
+    $routes->post('toggle-status/(:num)', 'Package::toggleStatus/$1');
 });
 
 $routes->group('agency', ['filter' => 'auth:agency'], function ($routes) {

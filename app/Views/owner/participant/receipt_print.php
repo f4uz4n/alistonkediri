@@ -95,14 +95,17 @@
 </head>
 <body>
 
-<div class="container no-print mt-4 mb-2 text-center">
-    <button onclick="window.print()" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow-sm">
-        <i class="bi bi-printer-fill me-2"></i> Cetak Sekarang
-    </button>
-    <a href="javascript:window.close()" class="btn btn-light btn-lg rounded-pill px-4 ms-2 border">Tutup</a>
+<div class="no-print mt-4 mb-4 p-4 rounded-3 text-center" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+    <div class="d-flex flex-wrap gap-2 justify-content-center align-items-center">
+        <button type="button" class="btn btn-primary rounded-pill px-4" onclick="window.print()"><i class="bi bi-printer me-2"></i>Cetak</button>
+        <button type="button" class="btn btn-danger rounded-pill px-4" id="btnDownloadPdf"><i class="bi bi-file-pdf me-2"></i>Download PDF</button>
+        <a href="#" class="btn btn-success rounded-pill px-4 text-white" id="btnShareWa" target="_blank" rel="noopener"><i class="bi bi-whatsapp me-2"></i>Share WA</a>
+        <a href="<?= base_url('owner/participant/kelola/' . (int)($participant['id'] ?? 0)) ?>" class="btn btn-light rounded-pill px-4 border"><i class="bi bi-arrow-left me-2"></i>Kembali</a>
+        <a href="javascript:window.close()" class="btn btn-outline-secondary rounded-pill px-4">Tutup</a>
+    </div>
 </div>
 
-<div class="receipt-container">
+<div class="receipt-container print-sheet">
     <div class="watermark">LUNAS</div>
     
     <div class="receipt-header">
@@ -219,17 +222,63 @@
             </ul>
         </div>
         <div class="col-4 text-center">
-            <div class="mb-5 pb-3">
+            <div class="mb-3 pb-2">
                 <div class="info-label">Sekretaris/Bendahara,</div>
             </div>
-            <div class="mt-4 pt-2">
+            <div class="mt-3 pt-2">
                 <div class="h5 fw-bold mb-0"><?= esc($nama_penandatangan ?? session()->get('full_name')) ?></div>
-                <div class="info-label">Aliston Tour & Travel</div>
+                <div class="info-label mb-2">Aliston Tour & Travel</div>
+                <?php if (!empty($qr_url)): ?>
+                <div class="qr-ttd mt-2 pt-2">
+                    <img src="<?= esc($qr_url) ?>" alt="Tanda Tangan Digital" width="100" height="100">
+                    <div class="small text-secondary mt-1">Tanda Tangan Digital</div>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 </div>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+(function() {
+    var btnPdf = document.getElementById('btnDownloadPdf');
+    if (btnPdf) {
+        btnPdf.addEventListener('click', function() {
+            var el = document.querySelector('.print-sheet');
+            if (!el) { el = document.body; }
+            var name = <?= json_encode(isset($participant['name']) ? preg_replace('/[^a-z0-9 _-]/i', '-', $participant['name']) : 'kwitansi') ?>;
+            var opt = {
+                margin: [4, 6, 6, 6],
+                filename: 'Kwitansi-Lunas-' + name + '.pdf',
+                image: { type: 'jpeg', quality: 0.96 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    scrollY: 0,
+                    scrollX: 0,
+                    windowHeight: el.scrollHeight,
+                    height: el.scrollHeight,
+                    onclone: function(clonedDoc, elClone) {
+                        var wrap = clonedDoc.querySelector('.print-sheet');
+                        if (wrap) wrap.style.minHeight = 'auto';
+                    }
+                },
+                jsPDF: { unit: 'mm', format: 'legal', orientation: 'portrait', hotfixes: ['px_scaling'] }
+            };
+            html2pdf().set(opt).from(el).save();
+        });
+    }
+    var btnWa = document.getElementById('btnShareWa');
+    if (btnWa) {
+        var title = <?= json_encode($title ?? 'Kwitansi Pendaftaran') ?>;
+        var url = window.location.href;
+        btnWa.href = 'https://wa.me/?text=' + encodeURIComponent(title + ' ' + url);
+    }
+})();
+</script>
 </body>
 </html>

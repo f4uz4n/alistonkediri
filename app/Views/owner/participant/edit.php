@@ -8,7 +8,7 @@
                 <h2 class="fw-800 text-dark mb-1">Edit Data Jamaah</h2>
                 <p class="text-secondary mb-0">Paket: <span class="text-primary fw-bold"><?= esc($package['name']) ?></span></p>
             </div>
-            <a href="<?= base_url('agency/participants') ?>" class="btn btn-light border rounded-pill px-4 fw-bold">
+            <a href="<?= base_url('owner/participant') ?>" class="btn btn-light border rounded-pill px-4 fw-bold">
                 <i class="bi bi-arrow-left me-2"></i>Kembali
             </a>
         </div>
@@ -19,7 +19,7 @@
             </div>
         <?php endif; ?>
 
-        <form action="<?= base_url('agency/update-participant/'.$participant['id']) ?>" method="post" enctype="multipart/form-data">
+        <form action="<?= base_url('owner/participant/update/'.$participant['id']) ?>" method="post" enctype="multipart/form-data">
             <?= csrf_field() ?>
 
             <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">

@@ -27,7 +27,8 @@
         <?php if (empty($packages)): ?>
             <div class="p-5 text-center text-muted">
                 <i class="bi bi-briefcase display-4"></i>
-                <p class="mt-2 mb-0">Belum ada paket.</p>
+                <p class="mt-2 mb-0">Tidak ada paket yang dapat menerima pendaftaran.</p>
+                <p class="small mb-0">Paket expired atau kuota penuh tidak ditampilkan. Pastikan ada paket aktif dengan tanggal keberangkatan belum lewat.</p>
             </div>
         <?php else: ?>
             <table class="table table-hover align-middle mb-0">

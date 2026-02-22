@@ -251,11 +251,19 @@ class Participant extends BaseController
         $owner = $userModel->where('role', 'owner')->first();
         $namaPenandatangan = !empty($owner['nama_sekretaris_bendahara']) ? $owner['nama_sekretaris_bendahara'] : ($owner['full_name'] ?? '—');
 
+        $totalPaid = 0;
+        foreach ($payments as $p) {
+            $totalPaid += $p['amount'];
+        }
+        $qrData = 'RECEIPT#' . $id . '#' . $totalPaid . '#' . date('Y-m-d');
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' . rawurlencode($qrData);
+
         $data = [
             'participant' => $participant,
             'payments' => $payments,
             'nama_penandatangan' => $namaPenandatangan,
-            'title' => 'Kwitansi Pendaftaran - ' . $participant['name']
+            'title' => 'Kwitansi Pendaftaran - ' . $participant['name'],
+            'qr_url' => $qrUrl,
         ];
 
         return view('owner/participant/receipt_print', $data);
@@ -271,7 +279,7 @@ class Participant extends BaseController
         }
 
         $participant = $this->participantModel
-            ->select('participants.*, travel_packages.name as package_name, travel_packages.price as package_price, travel_packages.departure_date as package_departure_date, travel_packages.freebies as package_freebies, travel_packages.inclusions as package_inclusions, travel_packages.hotel_mekkah_id, travel_packages.hotel_madinah_id, users.full_name as agency_name, travel_hotels.name as hotel_upgrade_name, travel_hotel_rooms.name as room_upgrade_name, travel_hotel_rooms.type as room_upgrade_type')
+            ->select('participants.*, travel_packages.name as package_name, travel_packages.price as package_price, travel_packages.departure_date as package_departure_date, travel_packages.freebies as package_freebies, travel_packages.inclusions as package_inclusions, travel_packages.exclusions as package_exclusions, travel_packages.hotel_mekkah_id, travel_packages.hotel_madinah_id, users.full_name as agency_name, travel_hotels.name as hotel_upgrade_name, travel_hotel_rooms.name as room_upgrade_name, travel_hotel_rooms.type as room_upgrade_type')
             ->join('travel_packages', 'travel_packages.id = participants.package_id')
             ->join('users', 'users.id = participants.agency_id')
             ->join('travel_hotels', 'travel_hotels.id = participants.hotel_upgrade_id', 'left')
@@ -321,6 +329,7 @@ class Participant extends BaseController
 
         $freebies = json_decode($participant['package_freebies'] ?? '[]', true) ?? [];
         $inclusions = json_decode($participant['package_inclusions'] ?? '[]', true) ?? [];
+        $exclusions = json_decode($participant['package_exclusions'] ?? '[]', true) ?? [];
 
         $tanggalSignature = date('d/m/Y H:i');
         $qrData = 'REG#' . $id . '#' . $participant['nik'] . '#' . $tanggalSignature;
@@ -333,6 +342,7 @@ class Participant extends BaseController
             'total_target' => $totalTarget,
             'freebies' => $freebies,
             'inclusions' => $inclusions,
+            'exclusions' => $exclusions,
             'hotels_package' => $hotelsPackage,
             'master_attributes' => $masterAttributes,
             'collected_map' => $collectedMap,
@@ -343,6 +353,7 @@ class Participant extends BaseController
             'tanggal_signature' => $tanggalSignature,
             'qr_url' => $qrUrl,
             'title' => 'Formulir Pendaftaran - ' . $participant['name'],
+            'back_url' => base_url('owner/participant'),
         ];
         return view('owner/participant/registration_form_print', $data);
     }
@@ -483,6 +494,144 @@ class Participant extends BaseController
             'can_boarding' => $can_boarding,
         ];
         return view('owner/participant/kelola', $data);
+    }
+
+    /**
+     * Halaman edit data jamaah (owner) — biodata & dokumen.
+     */
+    public function editParticipant($id)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+
+        $participant = $this->participantModel->find($id);
+        if (!$participant) {
+            return redirect()->to('owner/participant')->with('error', 'Jamaah tidak ditemukan.');
+        }
+
+        $db = \Config\Database::connect();
+        $documents = $db->table('participant_documents')
+            ->where('participant_id', $id)
+            ->get()
+            ->getResultArray();
+
+        $docsFormatted = [];
+        foreach ($documents as $doc) {
+            $docsFormatted[$doc['type']] = $doc['file_path'];
+        }
+
+        $packageModel = new PackageModel();
+        $data = [
+            'participant' => $participant,
+            'package' => $packageModel->find($participant['package_id']),
+            'documents' => $docsFormatted,
+        ];
+        return view('owner/participant/edit', $data);
+    }
+
+    /**
+     * Simpan perubahan data jamaah (owner).
+     */
+    public function updateParticipant($id)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+
+        $participant = $this->participantModel->find($id);
+        if (!$participant) {
+            return redirect()->to('owner/participant')->with('error', 'Jamaah tidak ditemukan.');
+        }
+
+        $rules = [
+            'nik' => 'required|min_length[16]|max_length[20]',
+            'name' => 'required|min_length[3]',
+            'phone' => 'required|min_length[8]',
+            'emergency_name' => 'required|min_length[2]',
+            'emergency_relationship' => 'required|min_length[2]',
+            'emergency_phone' => 'required|min_length[8]',
+        ];
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('error', 'Mohon lengkapi data wajib dengan benar.');
+        }
+
+        $passportNumber = trim($this->request->getPost('passport_number') ?? '');
+        $passportFullName = trim($this->request->getPost('passport_full_name') ?? '');
+        $hasPassport = $passportNumber !== '' || $passportFullName !== '';
+
+        $participantData = [
+            'nik' => $this->request->getPost('nik'),
+            'name' => $this->request->getPost('name'),
+            'place_of_birth' => $this->request->getPost('place_of_birth'),
+            'date_of_birth' => $this->request->getPost('date_of_birth'),
+            'gender' => $this->request->getPost('gender'),
+            'address' => $this->request->getPost('address'),
+            'rt_rw' => $this->request->getPost('rt_rw'),
+            'kelurahan' => $this->request->getPost('kelurahan'),
+            'kecamatan' => $this->request->getPost('kecamatan'),
+            'kabupaten' => $this->request->getPost('kabupaten'),
+            'provinsi' => $this->request->getPost('provinsi'),
+            'religion' => $this->request->getPost('religion'),
+            'marital_status' => $this->request->getPost('marital_status'),
+            'occupation' => $this->request->getPost('occupation'),
+            'blood_type' => $this->request->getPost('blood_type'),
+            'phone' => $this->request->getPost('phone'),
+            'emergency_name' => $this->request->getPost('emergency_name'),
+            'emergency_relationship' => $this->request->getPost('emergency_relationship'),
+            'emergency_phone' => $this->request->getPost('emergency_phone'),
+            'has_passport' => $hasPassport ? 1 : 0,
+        ];
+        $participantData['nationality'] = $hasPassport ? ($this->request->getPost('passport_nationality') ?: 'Indonesian') : ($this->request->getPost('nationality') ?? $participant['nationality'] ?? 'WNI');
+        $participantData['passport_number'] = $hasPassport ? ($this->request->getPost('passport_number') ?? null) : null;
+        $participantData['passport_type'] = $hasPassport ? ($this->request->getPost('passport_type') ?: null) : null;
+        $participantData['passport_full_name'] = $hasPassport ? ($this->request->getPost('passport_full_name') ?? null) : null;
+        $participantData['passport_place_of_birth'] = $hasPassport ? ($this->request->getPost('passport_place_of_birth') ?: null) : null;
+        $participantData['passport_issuance_date'] = $hasPassport ? ($this->request->getPost('passport_issuance_date') ?: null) : null;
+        $participantData['passport_expiry_date'] = $hasPassport ? ($this->request->getPost('passport_expiry_date') ?: null) : null;
+        $participantData['passport_issuance_city'] = $hasPassport ? ($this->request->getPost('passport_issuance_city') ?: null) : null;
+        $participantData['passport_reg_number'] = $hasPassport ? ($this->request->getPost('passport_reg_number') ?: null) : null;
+        $participantData['passport_issuing_office'] = $hasPassport ? ($this->request->getPost('passport_issuing_office') ?: null) : null;
+        $participantData['passport_name_idn'] = $hasPassport ? ($this->request->getPost('passport_name_idn') ?: null) : null;
+
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        $this->participantModel->update($id, $participantData);
+
+        $docTypes = ['passport', 'id_card', 'kk', 'vaccine'];
+        foreach ($docTypes as $type) {
+            $file = $this->request->getFile($type);
+            if ($file && $file->isValid() && !$file->hasMoved()) {
+                $newName = $file->getRandomName();
+                $file->move('uploads/documents', $newName);
+                $existingDoc = $db->table('participant_documents')->where('participant_id', $id)->where('type', $type)->get()->getRow();
+                if ($existingDoc) {
+                    $db->table('participant_documents')->where('id', $existingDoc->id)->update([
+                        'file_path' => 'uploads/documents/' . $newName,
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ]);
+                    if (!empty($existingDoc->file_path) && is_file(FCPATH . $existingDoc->file_path)) {
+                        @unlink(FCPATH . $existingDoc->file_path);
+                    }
+                } else {
+                    $db->table('participant_documents')->insert([
+                        'participant_id' => $id,
+                        'type' => $type,
+                        'file_path' => 'uploads/documents/' . $newName,
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ]);
+                }
+            }
+        }
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            return redirect()->back()->withInput()->with('error', 'Gagal memperbarui data jamaah.');
+        }
+        return redirect()->to('owner/participant')->with('msg', 'Data jamaah ' . $participant['name'] . ' berhasil diperbarui.');
     }
 
     private function checkH30ForChange($participantId)
@@ -1129,7 +1278,11 @@ class Participant extends BaseController
             return redirect()->to('owner/participant')->with('error', 'User Kantor Pusat belum diset. Jalankan migrasi.');
         }
         $packageModel = new PackageModel();
-        $packages = $packageModel->orderBy('departure_date', 'DESC')->findAll();
+        $today = date('Y-m-d');
+        $packages = $packageModel->where('is_active', 1)
+            ->where('departure_date >=', $today)
+            ->orderBy('departure_date', 'ASC')
+            ->findAll();
         $data = ['packages' => $packages];
         return view('owner/participant/register_list', $data);
     }
@@ -1150,6 +1303,13 @@ class Participant extends BaseController
         $package = $packageModel->find($package_id);
         if (!$package) {
             return redirect()->to('owner/participant/register')->with('error', 'Paket tidak ditemukan.');
+        }
+        if (empty($package['is_active'])) {
+            return redirect()->to('owner/participant/register')->with('error', 'Paket tidak dapat menerima pendaftaran (kuota penuh).');
+        }
+        $depDate = isset($package['departure_date']) ? substr((string)$package['departure_date'], 0, 10) : '';
+        if ($depDate !== '' && $depDate < date('Y-m-d')) {
+            return redirect()->to('owner/participant/register')->with('error', 'Paket sudah expired. Tidak dapat mendaftarkan jamaah.');
         }
         $data = ['package' => $package];
         return view('owner/participant/register_form', $data);
@@ -1185,11 +1345,25 @@ class Participant extends BaseController
             return redirect()->back()->withInput()->with('error', 'Mohon lengkapi seluruh biodata wajib sesuai KTP.');
         }
 
+        $packageId = (int) $this->request->getPost('package_id');
+        $packageModel = new PackageModel();
+        $package = $packageModel->find($packageId);
+        if (!$package) {
+            return redirect()->back()->withInput()->with('error', 'Paket tidak ditemukan.');
+        }
+        if (empty($package['is_active'])) {
+            return redirect()->back()->withInput()->with('error', 'Paket tidak dapat menerima pendaftaran (kuota penuh).');
+        }
+        $depDate = isset($package['departure_date']) ? substr((string)$package['departure_date'], 0, 10) : '';
+        if ($depDate !== '' && $depDate < date('Y-m-d')) {
+            return redirect()->back()->withInput()->with('error', 'Paket sudah expired. Tidak dapat mendaftarkan jamaah.');
+        }
+
         $db = \Config\Database::connect();
         $db->transStart();
 
         $participantData = [
-            'package_id' => $this->request->getPost('package_id'),
+            'package_id' => $packageId,
             'agency_id' => $agencyId,
             'nik' => $this->request->getPost('nik'),
             'name' => $this->request->getPost('name'),
@@ -1213,7 +1387,7 @@ class Participant extends BaseController
 
         $participantId = $this->participantModel->insert($participantData);
 
-        $docTypes = ['passport', 'id_card', 'vaccine'];
+        $docTypes = ['passport', 'id_card', 'kk', 'vaccine'];
         foreach ($docTypes as $type) {
             $file = $this->request->getFile($type);
             if ($file && $file->isValid() && !$file->hasMoved()) {

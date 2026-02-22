@@ -185,7 +185,12 @@ $paketChunks = array_chunk($packages ?? [], 3);
                         <div class="col-md-4">
                             <div class="card card-package h-100 border-0 shadow-sm rounded-4 overflow-hidden">
                                 <?php if (!empty($p['image']) && is_file(FCPATH . $p['image'])): ?>
-                                    <img src="<?= base_url($p['image']) ?>" class="card-img-top" alt="<?= esc($p['name']) ?>" style="height: 200px; object-fit: cover;">
+                                    <div class="position-relative card-img-wrapper" style="height: 200px;">
+                                        <a href="<?= base_url($p['image']) ?>" target="_blank" rel="noopener" class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-end text-decoration-none" style="z-index: 2;" title="Lihat gambar">
+                                            <span class="text-center py-2 small fw-bold text-white" style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"><i class="bi bi-image me-1"></i> View image</span>
+                                        </a>
+                                        <img src="<?= base_url($p['image']) ?>" class="card-img-top" alt="<?= esc($p['name']) ?>" style="height: 200px; object-fit: cover; position: relative; z-index: 1;">
+                                    </div>
                                 <?php else: ?>
                                     <div class="card-img-top bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="height: 200px;">
                                         <i class="bi bi-image text-primary display-4"></i>
@@ -194,10 +199,24 @@ $paketChunks = array_chunk($packages ?? [], 3);
                                 <div class="card-body">
                                     <h5 class="card-title fw-bold text-dark"><?= esc($p['name']) ?></h5>
                                     <p class="text-primary fw-bold mb-2"><?= format_price_display($p['price']) ?></p>
+                                    <?php
+                                    $durasi = $p['duration'] ?? '';
+                                    if ($durasi !== '' && is_numeric(trim($durasi))) {
+                                        $durasi = trim($durasi) . ' Hari';
+                                    } elseif ($durasi === '') {
+                                        $durasi = '-';
+                                    }
+                                    $hariEn = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                                    $hariId = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+                                    $ts = strtotime($p['departure_date']);
+                                    $dayName = $hariId[array_search(date('l', $ts), $hariEn)];
+                                    $tglBerangkat = $dayName . ', ' . date('d M Y', $ts);
+                                    ?>
+                                    <p class="small text-secondary mb-1">
+                                        <i class="bi bi-clock me-1"></i> <strong>Durasi:</strong> <?= esc($durasi) ?>
+                                    </p>
                                     <p class="small text-secondary mb-3">
-                                        <i class="bi bi-calendar-event me-1"></i> <?= date('d M Y', strtotime($p['departure_date'])) ?>
-                                        &nbsp;&middot;&nbsp;
-                                        <i class="bi bi-clock me-1"></i> <?= esc($p['duration'] ?? '-') ?>
+                                        <i class="bi bi-calendar-event me-1"></i> <strong>Tanggal Pemberangkatan:</strong><br class="d-md-none"> <?= esc($tglBerangkat) ?>
                                     </p>
                                     <a href="<?= base_url('package/' . $p['id']) ?>" class="btn btn-outline-primary rounded-pill w-100">
                                         <i class="bi bi-info-circle me-1"></i> Detail Paket

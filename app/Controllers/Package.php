@@ -174,6 +174,7 @@ class Package extends BaseController
 
         $inclusions = $this->request->getPost('inclusions');
         $freebies = $this->request->getPost('freebies');
+        $exclusions = $this->request->getPost('exclusions');
 
         $parseList = function ($text) {
             if (!$text)
@@ -200,6 +201,7 @@ class Package extends BaseController
             'price_unit' => 'JT',
             'inclusions' => json_encode($parseList($inclusions)),
             'freebies' => json_encode($parseList($freebies)),
+            'exclusions' => json_encode($parseList($exclusions)),
             'commission_per_pax' => $this->parseRupiahToNumber($this->request->getPost('commission_per_pax')),
             'branch_info' => $this->request->getPost('branch_info')
         ];
@@ -231,8 +233,9 @@ class Package extends BaseController
         }
 
         // Convert JSON back to newline-separated string for textarea
-        $package['inclusions_text'] = implode("\n", json_decode($package['inclusions'], true) ?? []);
-        $package['freebies_text'] = implode("\n", json_decode($package['freebies'], true) ?? []);
+        $package['inclusions_text'] = implode("\n", json_decode($package['inclusions'] ?? '[]', true) ?? []);
+        $package['freebies_text'] = implode("\n", json_decode($package['freebies'] ?? '[]', true) ?? []);
+        $package['exclusions_text'] = implode("\n", json_decode($package['exclusions'] ?? '[]', true) ?? []);
         $this->enrichPackageWithHotelMaster($package);
 
         $data = array_merge(
@@ -256,6 +259,7 @@ class Package extends BaseController
 
         $inclusions = $this->request->getPost('inclusions');
         $freebies = $this->request->getPost('freebies');
+        $exclusions = $this->request->getPost('exclusions');
 
         $parseList = function ($text) {
             if (!$text)
@@ -282,6 +286,7 @@ class Package extends BaseController
             'price_unit' => 'JT',
             'inclusions' => json_encode($parseList($inclusions)),
             'freebies' => json_encode($parseList($freebies)),
+            'exclusions' => json_encode($parseList($exclusions)),
             'commission_per_pax' => $this->parseRupiahToNumber($this->request->getPost('commission_per_pax')),
             'branch_info' => $this->request->getPost('branch_info')
         ];
@@ -324,12 +329,42 @@ class Package extends BaseController
             return redirect()->to('/login');
         }
 
+        $id = (int) $id;
         $package = $this->packageModel->find($id);
-        if ($package && $package['image'] && file_exists($package['image'])) {
-            unlink($package['image']);
+        if (!$package) {
+            return redirect()->to('/package')->with('error', 'Paket tidak ditemukan.');
         }
 
-        $this->packageModel->delete($id);
-        return redirect()->to('/package')->with('msg', 'Paket berhasil dihapus');
+        try {
+            if (!empty($package['image']) && is_file(FCPATH . $package['image'])) {
+                @unlink(FCPATH . $package['image']);
+            }
+            $this->packageModel->delete($id);
+            return redirect()->to('/package')->with('msg', 'Paket berhasil dihapus');
+        } catch (\Throwable $e) {
+            log_message('error', 'Package delete failed: ' . $e->getMessage());
+            return redirect()->to('/package')->with('error', 'Gagal menghapus paket. Pastikan tidak ada data jamaah/pembayaran yang masih terhubung, atau hubungi administrator.');
+        }
+    }
+
+    /**
+     * Toggle status paket (aktif/nonaktif) — untuk penuh atau sudah berakhir.
+     */
+    public function toggleStatus($id)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+
+        $id = (int) $id;
+        $package = $this->packageModel->find($id);
+        if (!$package) {
+            return redirect()->to('/package')->with('error', 'Paket tidak ditemukan.');
+        }
+
+        $newStatus = empty($package['is_active']) ? 1 : 0;
+        $this->packageModel->update($id, ['is_active' => $newStatus]);
+        $label = $newStatus ? 'diaktifkan' : 'dinonaktifkan';
+        return redirect()->to('/package')->with('msg', 'Paket "' . esc($package['name']) . '" berhasil ' . $label . '.');
     }
 }
