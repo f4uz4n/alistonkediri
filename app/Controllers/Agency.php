@@ -1091,7 +1091,7 @@ class Agency extends BaseController
 
         // Semua jenis dari form; untuk DB hanya passport, id_card, vaccine, kk, other (sisanya simpan sebagai other + label di title)
         $typeLabels = [
-            'passport' => 'Paspor', 'id_card' => 'KTP', 'kk' => 'KK', 'vaccine' => 'Kartu Vaksin',
+            'passport' => 'Paspor', 'id_card' => 'KTP', 'kk' => 'KK', 'vaccine' => 'Dokumen pendukung (akta lahir/ijazah/buku nikah)',
             'visa' => 'Visa', 'vaccine_meningitis' => 'Vaksin Meningitis', 'vaccine_covid' => 'Vaksin Covid',
             'insurance' => 'Asuransi', 'ticket' => 'Tiket', 'photo' => 'Pas Foto 4x6', 'other' => 'Lainnya',
         ];

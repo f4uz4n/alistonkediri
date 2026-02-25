@@ -57,6 +57,11 @@
                             <?php endif; ?>
                         </td>
                         <td class="pe-4 text-end">
+                            <a href="<?= base_url('owner/tabungan/edit-deposit/' . $d['id']) ?>" class="btn btn-outline-info btn-sm rounded-pill me-1" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                            <form action="<?= base_url('owner/tabungan/delete-deposit/' . $d['id']) ?>" method="post" class="d-inline me-1" onsubmit="return confirm('Yakin hapus setoran ini?');">
+                                <?= csrf_field() ?>
+                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill" title="Hapus"><i class="bi bi-trash"></i></button>
+                            </form>
                             <form action="<?= base_url('owner/tabungan/verify-deposit/' . $d['id']) ?>" method="post" class="d-inline">
                                 <?= csrf_field() ?>
                                 <button type="submit" class="btn btn-success btn-sm rounded-pill px-3">Verifikasi</button>

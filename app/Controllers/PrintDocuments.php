@@ -182,12 +182,12 @@ class PrintDocuments extends BaseController
             return redirect()->to($redirectUrl)->with('error', 'Setoran belum diverifikasi.');
         }
 
-        // Ambil data owner untuk kop surat
+        // Ambil data owner untuk kop surat; penerima = nama Sekretaris/Bendahara (jika diisi) atau full_name
         $owner = $this->userModel->where('role', 'owner')->first();
         $companyLogo = !empty($owner['company_logo']) ? base_url($owner['company_logo']) : base_url('assets/img/logo_.png');
         $companyName = $owner['company_name'] ?? 'Nama Perusahaan';
         $companyAddress = $owner['address'] ?? '';
-        $namaDirektur = $owner['full_name'] ?? '—';
+        $namaPenerima = !empty($owner['nama_sekretaris_bendahara']) ? $owner['nama_sekretaris_bendahara'] : ($owner['full_name'] ?? '—');
 
         // Ambil total saldo tabungan
         $saving = $this->savingModel->find($deposit['travel_saving_id']);
@@ -199,7 +199,7 @@ class PrintDocuments extends BaseController
             'company_logo_url' => $companyLogo,
             'company_name' => $companyName,
             'company_address' => $companyAddress,
-            'nama_direktur' => $namaDirektur,
+            'nama_direktur' => $namaPenerima,
         ];
 
         return view('owner/print/deposit_receipt', $data);

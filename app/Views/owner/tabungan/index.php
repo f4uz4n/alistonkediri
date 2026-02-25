@@ -79,7 +79,13 @@ $savings_claimed = array_filter($savings ?? [], function($s) { return ($s['statu
                                     <td class="text-end fw-bold">Rp <?= number_format($s['total_balance'], 0, ',', '.') ?></td>
                                     <td class="pe-4 text-end">
                                         <a href="<?= base_url('owner/tabungan/deposit/' . $s['id']) ?>" class="btn btn-outline-primary btn-sm rounded-pill me-1">Setoran</a>
-                                        <a href="<?= base_url('owner/tabungan/claim/' . $s['id']) ?>" class="btn btn-outline-success btn-sm rounded-pill">Klaim ke Paket</a>
+                                        <a href="<?= base_url('owner/tabungan/claim/' . $s['id']) ?>" class="btn btn-outline-success btn-sm rounded-pill me-1">Klaim ke Paket</a>
+                                        <a href="<?= base_url('owner/tabungan/edit/' . $s['id']) ?>" class="btn btn-outline-info btn-sm rounded-pill me-1" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                        <form action="<?= base_url('owner/tabungan/delete/' . $s['id']) ?>" method="post" class="d-inline" onsubmit="return confirm('Yakin hapus jamaah tabungan ini? Semua data setoran juga akan terhapus.');">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill me-1" title="Hapus"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                        <a href="<?= base_url('owner/tabungan/receipt/' . $s['id']) ?>" target="_blank" class="btn btn-outline-secondary btn-sm rounded-pill" title="Cetak Kwitansi"><i class="bi bi-printer"></i></a>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
@@ -136,7 +142,8 @@ $savings_claimed = array_filter($savings ?? [], function($s) { return ($s['statu
                                     <td class="small"><?= !empty($s['created_at']) ? date('d M Y', strtotime($s['created_at'])) : '—' ?></td>
                                     <td class="text-end fw-bold">Rp <?= number_format($s['total_balance'], 0, ',', '.') ?></td>
                                     <td class="pe-4 text-end">
-                                        <a href="<?= base_url('owner/participant/kelola/' . $s['participant_id']) ?>" class="btn btn-outline-secondary btn-sm rounded-pill">Lihat Jamaah</a>
+                                        <a href="<?= base_url('owner/participant/kelola/' . $s['participant_id']) ?>" class="btn btn-outline-secondary btn-sm rounded-pill me-1">Lihat Jamaah</a>
+                                        <a href="<?= base_url('owner/tabungan/receipt/' . $s['id']) ?>" target="_blank" class="btn btn-outline-secondary btn-sm rounded-pill" title="Cetak Kwitansi"><i class="bi bi-printer"></i></a>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>

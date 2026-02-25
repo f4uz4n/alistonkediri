@@ -66,14 +66,17 @@
                                     <span class="badge bg-success bg-opacity-10 text-success small">Terverifikasi</span>
                                 <?php endif; ?>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-1 flex-wrap">
                                 <?php if (!empty($d['proof'])): ?>
-                                    <a href="<?= base_url($d['proof']) ?>" target="_blank" class="btn btn-light btn-sm">Bukti</a>
+                                    <a href="<?= base_url($d['proof']) ?>" target="_blank" class="btn btn-light btn-sm rounded-pill" title="Lihat Bukti">Bukti</a>
                                 <?php endif; ?>
+                                <a href="<?= base_url('owner/tabungan/edit-deposit/' . $d['id']) ?>" class="btn btn-outline-info btn-sm rounded-pill" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                <form action="<?= base_url('owner/tabungan/delete-deposit/' . $d['id']) ?>" method="post" class="d-inline" onsubmit="return confirm('Yakin hapus setoran Rp <?= number_format($d['amount'], 0, ',', '.') ?> ini?');">
+                                    <?= csrf_field() ?>
+                                    <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill" title="Hapus"><i class="bi bi-trash"></i></button>
+                                </form>
                                 <?php if (($d['status'] ?? 'verified') === 'verified'): ?>
-                                    <a href="<?= base_url('owner/print-documents/deposit-receipt?deposit_id=' . $d['id']) ?>" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill" title="Cetak Bukti Setoran">
-                                        <i class="bi bi-printer-fill"></i>
-                                    </a>
+                                    <a href="<?= base_url('owner/print-documents/deposit-receipt?deposit_id=' . $d['id']) ?>" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill" title="Cetak Kwitansi"><i class="bi bi-printer"></i></a>
                                 <?php endif; ?>
                             </div>
                         </li>

@@ -254,10 +254,10 @@
                                 <input type="file" name="kk" class="form-control form-control-sm bg-light">
                             </div>
                             <div>
-                                <label class="form-label small fw-bold text-secondary">Kartu Vaksin</label>
+                                <label class="form-label small fw-bold text-secondary">Dokumen pendukung (akta lahir/ijazah/buku nikah)</label>
                                 <?php if(isset($documents['vaccine'])): ?>
                                     <div class="mb-2">
-                                        <a href="<?= base_url($documents['vaccine']) ?>" target="_blank" class="badge bg-primary text-decoration-none">Lihat Vaksin Saat Ini</a>
+                                        <a href="<?= base_url($documents['vaccine']) ?>" target="_blank" class="badge bg-primary text-decoration-none">Lihat dokumen saat ini</a>
                                     </div>
                                 <?php endif; ?>
                                 <input type="file" name="vaccine" class="form-control form-control-sm bg-light">

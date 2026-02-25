@@ -367,6 +367,88 @@ class Owner extends BaseController
         return redirect()->to('owner/payment-verification')->with('msg', $msg);
     }
 
+    /**
+     * Form edit pembayaran (dari menu verifikasi pembayaran).
+     */
+    public function editPayment($id)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+        $paymentModel = new \App\Models\PaymentModel();
+        $payment = $paymentModel->select('participant_payments.*, participants.name as participant_name, participants.nik as participant_nik, users.full_name as agency_name, travel_packages.name as package_name')
+            ->join('participants', 'participants.id = participant_payments.participant_id')
+            ->join('users', 'users.id = participants.agency_id')
+            ->join('travel_packages', 'travel_packages.id = participants.package_id')
+            ->where('participant_payments.id', $id)
+            ->first();
+        if (!$payment) {
+            return redirect()->to('owner/payment-verification')->with('error', 'Data pembayaran tidak ditemukan.');
+        }
+        $data = [
+            'payment' => $payment,
+            'title' => 'Edit Pembayaran',
+        ];
+        return view('owner/payment_edit', $data);
+    }
+
+    /**
+     * Update pembayaran (nominal, tanggal, catatan, bukti).
+     */
+    public function updatePayment($id)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+        $paymentModel = new \App\Models\PaymentModel();
+        $payment = $paymentModel->find($id);
+        if (!$payment) {
+            return redirect()->to('owner/payment-verification')->with('error', 'Data pembayaran tidak ditemukan.');
+        }
+        $rules = [
+            'amount' => 'required|decimal|greater_than[0]',
+            'payment_date' => 'required|valid_date',
+        ];
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+        $amount = (float) str_replace([',', '.'], '', $this->request->getPost('amount'));
+        $proof = $payment['proof'];
+        $file = $this->request->getFile('proof');
+        if ($file && $file->isValid() && !$file->hasMoved()) {
+            $dir = FCPATH . 'uploads/payments';
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            $proof = 'uploads/payments/' . $file->getRandomName();
+            $file->move($dir, basename($proof));
+        }
+        $paymentModel->update($id, [
+            'amount' => $amount,
+            'payment_date' => $this->request->getPost('payment_date'),
+            'proof' => $proof,
+            'notes' => $this->request->getPost('notes') ?: null,
+        ]);
+        return redirect()->to('owner/payment-verification')->with('msg', 'Pembayaran berhasil diperbarui.');
+    }
+
+    /**
+     * Hapus pembayaran.
+     */
+    public function deletePayment($id)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+        $paymentModel = new \App\Models\PaymentModel();
+        $payment = $paymentModel->find($id);
+        if (!$payment) {
+            return redirect()->to('owner/payment-verification')->with('error', 'Data pembayaran tidak ditemukan.');
+        }
+        $paymentModel->delete($id);
+        return redirect()->back()->with('msg', 'Pembayaran berhasil dihapus.');
+    }
+
     public function verifyParticipant()
     {
         $id = $this->request->getPost('id');

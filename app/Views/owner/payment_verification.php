@@ -3,6 +3,12 @@
 <?= $this->section('content') ?>
 <div class="row align-items-center mb-4">
     <div class="col-12">
+        <?php if (session()->getFlashdata('msg')): ?>
+            <div class="alert alert-success border-0 rounded-pill px-4 py-2 d-inline-block mb-2"><?= session()->getFlashdata('msg') ?></div>
+        <?php endif; ?>
+        <?php if (session()->getFlashdata('error')): ?>
+            <div class="alert alert-danger border-0 rounded-pill px-4 py-2 d-inline-block mb-2"><?= session()->getFlashdata('error') ?></div>
+        <?php endif; ?>
         <h2 class="fw-800 text-dark mb-1">Verifikasi Pembayaran</h2>
         <p class="text-secondary mb-0">Kelola konfirmasi pembayaran dari Agency & Jamaah</p>
         <?php if (!empty($nama_sekretaris_bendahara)): ?>
@@ -148,7 +154,12 @@ $url_history = base_url('owner/payment-verification?tab=history') . ($participan
                             </td>
                             <td class="pe-4 text-end">
                                 <?php if($active_tab === 'pending'): ?>
-                                    <div class="d-flex justify-content-end gap-2">
+                                    <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap">
+                                        <a href="<?= base_url('owner/payment-verification/edit-payment/' . $p['id']) ?>" class="btn btn-outline-info btn-sm rounded-pill" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                        <form action="<?= base_url('owner/payment-verification/delete-payment/' . $p['id']) ?>" method="post" class="d-inline" onsubmit="return confirm('Yakin hapus pembayaran Rp <?= number_format($p['amount'], 0, ',', '.') ?> ini?');">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill" title="Hapus"><i class="bi bi-trash"></i></button>
+                                        </form>
                                         <button type="button" class="btn btn-sm btn-success rounded-pill px-3" onclick="verifyPayment(<?= $p['id'] ?>, 'verified')">
                                             <i class="bi bi-check-lg"></i> Terima
                                         </button>
@@ -157,8 +168,13 @@ $url_history = base_url('owner/payment-verification?tab=history') . ($participan
                                         </button>
                                     </div>
                                 <?php else: ?>
-                                    <?php if($p['status'] === 'verified'): ?>
-                                        <div class="d-flex justify-content-end align-items-center gap-2">
+                                    <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap">
+                                        <a href="<?= base_url('owner/payment-verification/edit-payment/' . $p['id']) ?>" class="btn btn-outline-info btn-sm rounded-pill" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                        <form action="<?= base_url('owner/payment-verification/delete-payment/' . $p['id']) ?>" method="post" class="d-inline" onsubmit="return confirm('Yakin hapus pembayaran Rp <?= number_format($p['amount'], 0, ',', '.') ?> ini?');">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill" title="Hapus"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                        <?php if($p['status'] === 'verified'): ?>
                                             <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2">
                                                 <i class="bi bi-check-circle-fill me-1"></i> Diterima
                                             </span>
@@ -170,12 +186,12 @@ $url_history = base_url('owner/payment-verification?tab=history') . ($participan
                                                title="Cetak Kwitansi">
                                                 <i class="bi bi-printer"></i>
                                             </a>
-                                        </div>
-                                    <?php else: ?>
-                                        <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2">
-                                            <i class="bi bi-x-circle-fill me-1"></i> Ditolak
-                                        </span>
-                                    <?php endif; ?>
+                                        <?php else: ?>
+                                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2">
+                                                <i class="bi bi-x-circle-fill me-1"></i> Ditolak
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
                                 <?php endif; ?>
                             </td>
                         </tr>

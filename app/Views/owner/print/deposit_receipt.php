@@ -42,6 +42,16 @@
     </style>
 </head>
 <body>
+<div class="no-print mt-4 mb-4 p-4 rounded-3 text-center" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+    <div class="d-flex flex-wrap gap-2 justify-content-center align-items-center">
+        <button type="button" class="btn btn-primary rounded-pill px-4" onclick="window.print()"><i class="bi bi-printer me-2"></i>Cetak</button>
+        <button type="button" class="btn btn-danger rounded-pill px-4" id="btnDownloadPdf"><i class="bi bi-file-pdf me-2"></i>Download PDF</button>
+        <a href="#" class="btn btn-success rounded-pill px-4 text-white" id="btnShareWa" target="_blank" rel="noopener"><i class="bi bi-whatsapp me-2"></i>Share WA</a>
+        <a href="<?= base_url('owner/print-documents') ?>" class="btn btn-light rounded-pill px-4 border"><i class="bi bi-arrow-left me-2"></i>Kembali</a>
+        <a href="javascript:window.close()" class="btn btn-outline-secondary rounded-pill px-4">Tutup</a>
+    </div>
+</div>
+
 <div class="print-sheet">
     <!-- Kop -->
     <div class="kop">
@@ -138,13 +148,46 @@
     </div>
 </div>
 
-<div class="no-print">
-    <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" onclick="window.print()">
-        <i class="bi bi-printer-fill me-2"></i> Cetak Bukti
-    </button>
-    <a href="<?= base_url('owner/print-documents') ?>" class="btn btn-light rounded-pill px-4 fw-bold border ms-2">Kembali</a>
-</div>
-
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+(function() {
+    var btnPdf = document.getElementById('btnDownloadPdf');
+    if (btnPdf) {
+        btnPdf.addEventListener('click', function() {
+            var el = document.querySelector('.print-sheet');
+            if (!el) { el = document.body; }
+            var name = <?= json_encode(isset($deposit['saving_name']) ? preg_replace('/[^a-z0-9 _-]/i', '-', $deposit['saving_name']) : 'bukti-setoran') ?>;
+            var opt = {
+                margin: [4, 6, 6, 6],
+                filename: 'Bukti-Setoran-Tabungan-' + name + '.pdf',
+                image: { type: 'jpeg', quality: 0.96 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    scrollY: 0,
+                    scrollX: 0,
+                    windowHeight: el.scrollHeight,
+                    height: el.scrollHeight,
+                    onclone: function(clonedDoc, elClone) {
+                        var wrap = clonedDoc.querySelector('.print-sheet');
+                        if (wrap) wrap.style.minHeight = 'auto';
+                    }
+                },
+                jsPDF: { unit: 'mm', format: 'legal', orientation: 'portrait', hotfixes: ['px_scaling'] }
+            };
+            html2pdf().set(opt).from(el).save();
+        });
+    }
+    var btnWa = document.getElementById('btnShareWa');
+    if (btnWa) {
+        var title = <?= json_encode('Bukti Setoran Tabungan - ' . ($deposit['saving_name'] ?? 'Setoran')) ?>;
+        var url = window.location.href;
+        btnWa.href = 'https://wa.me/?text=' + encodeURIComponent(title + ' ' + url);
+    }
+})();
+</script>
 </body>
 </html>

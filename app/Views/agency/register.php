@@ -238,7 +238,7 @@
                                 <input type="file" name="kk" class="form-control form-control-sm bg-light">
                             </div>
                             <div>
-                                <label class="form-label small fw-bold text-secondary">Kartu Vaksin</label>
+                                <label class="form-label small fw-bold text-secondary">Dokumen pendukung (akta lahir/ijazah/buku nikah)</label>
                                 <input type="file" name="vaccine" class="form-control form-control-sm bg-light">
                             </div>
                         </div>

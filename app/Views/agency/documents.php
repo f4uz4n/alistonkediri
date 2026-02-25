@@ -108,7 +108,7 @@
                                 <option value="passport">Paspor</option>
                                 <option value="id_card">KTP</option>
                                 <option value="kk">KK</option>
-                                <option value="vaccine">Kartu Vaksin</option>
+                                <option value="vaccine">Dokumen pendukung (akta lahir/ijazah/buku nikah)</option>
                                 <option value="visa">Visa</option>
                                 <option value="vaccine_meningitis">Vaksin Meningitis</option>
                                 <option value="vaccine_covid">Vaksin Covid</option>

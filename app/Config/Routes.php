@@ -130,6 +130,13 @@ $routes->group('owner', ['filter' => 'auth:owner'], function ($routes) {
         $routes->get('tabungan/claim/(:num)', 'Tabungan::claimForm/$1');
         $routes->post('tabungan/do-claim', 'Tabungan::doClaim');
         $routes->post('tabungan/verify-deposit/(:num)', 'Tabungan::verifyDeposit/$1');
+        $routes->get('tabungan/edit/(:num)', 'Tabungan::edit/$1');
+        $routes->post('tabungan/update/(:num)', 'Tabungan::update/$1');
+        $routes->post('tabungan/delete/(:num)', 'Tabungan::delete/$1');
+        $routes->get('tabungan/receipt/(:num)', 'Tabungan::receipt/$1');
+        $routes->get('tabungan/edit-deposit/(:num)', 'Tabungan::editDeposit/$1');
+        $routes->post('tabungan/update-deposit/(:num)', 'Tabungan::updateDeposit/$1');
+        $routes->post('tabungan/delete-deposit/(:num)', 'Tabungan::deleteDeposit/$1');
 
         // Reports
         $routes->get('reports', 'Reports::index');
@@ -141,6 +148,9 @@ $routes->group('owner', ['filter' => 'auth:owner'], function ($routes) {
         $routes->post('update-settings', 'Owner::updateSettings');
         $routes->get('payment-verification', 'Owner::paymentVerification');
         $routes->post('verify-payment', 'Owner::verifyPayment');
+        $routes->get('payment-verification/edit-payment/(:num)', 'Owner::editPayment/$1');
+        $routes->post('payment-verification/update-payment/(:num)', 'Owner::updatePayment/$1');
+        $routes->post('payment-verification/delete-payment/(:num)', 'Owner::deletePayment/$1');
 
         // Participant Verification & Checklist
         $routes->get('checklist/(:num)', 'Owner::checklist/$1');

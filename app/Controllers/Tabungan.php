@@ -128,6 +128,116 @@ class Tabungan extends BaseController
         return redirect()->back()->withInput()->with('error', 'Gagal menyimpan data.');
     }
 
+    /**
+     * Form edit jamaah tabungan (hanya status menabung).
+     */
+    public function edit($id)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+        $saving = $this->savingModel->find($id);
+        if (!$saving || $saving['status'] !== 'menabung') {
+            return redirect()->to('owner/tabungan')->with('error', 'Data tabungan tidak ditemukan atau sudah diklaim.');
+        }
+        $agencies = $this->userModel->where('role', 'agency')->where('is_active', 1)->findAll();
+        $kantor = $this->userModel->where('username', 'kantor_pusat')->first();
+        if ($kantor) {
+            $agencies = array_merge([$kantor], $agencies);
+        }
+        $data = [
+            'saving' => $saving,
+            'agencies' => $agencies,
+            'title' => 'Edit Jamaah Tabungan',
+        ];
+        return view('owner/tabungan/edit', $data);
+    }
+
+    /**
+     * Update data jamaah tabungan (hanya status menabung).
+     */
+    public function update($id)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+        $saving = $this->savingModel->find($id);
+        if (!$saving || $saving['status'] !== 'menabung') {
+            return redirect()->to('owner/tabungan')->with('error', 'Data tabungan tidak ditemukan atau sudah diklaim.');
+        }
+        $rules = [
+            'agency_id' => 'required|integer',
+            'name' => 'required|min_length[3]',
+            'nik' => 'required|min_length[16]|max_length[20]',
+            'phone' => 'permit_empty',
+        ];
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+        $data = [
+            'agency_id' => (int) $this->request->getPost('agency_id'),
+            'name' => $this->request->getPost('name'),
+            'nik' => $this->request->getPost('nik'),
+            'phone' => $this->request->getPost('phone') ?: null,
+            'notes' => $this->request->getPost('notes') ?: null,
+        ];
+        if ($this->savingModel->update($id, $data)) {
+            return redirect()->to('owner/tabungan')->with('msg', 'Data tabungan berhasil diperbarui.');
+        }
+        return redirect()->back()->withInput()->with('error', 'Gagal memperbarui data.');
+    }
+
+    /**
+     * Hapus jamaah tabungan (hanya status menabung, dan saldo = 0 atau konfirmasi).
+     */
+    public function delete($id)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+        $saving = $this->savingModel->find($id);
+        if (!$saving || $saving['status'] !== 'menabung') {
+            return redirect()->to('owner/tabungan')->with('error', 'Data tabungan tidak ditemukan atau sudah diklaim.');
+        }
+        $db = \Config\Database::connect();
+        $db->transStart();
+        $this->depositModel->where('travel_saving_id', $id)->delete();
+        $this->savingModel->delete($id);
+        $db->transComplete();
+        if ($db->transStatus() === false) {
+            return redirect()->to('owner/tabungan')->with('error', 'Gagal menghapus data tabungan.');
+        }
+        return redirect()->to('owner/tabungan')->with('msg', 'Jamaah tabungan berhasil dihapus.');
+    }
+
+    /**
+     * Cetak kwitansi tabungan (Print, Download PDF, Share WA) — sama seperti kwitansi lain.
+     */
+    public function receipt($id)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+        $saving = $this->savingModel->getWithAgency()->where('travel_savings.id', $id)->first();
+        if (!$saving) {
+            return redirect()->to('owner/tabungan')->with('error', 'Data tabungan tidak ditemukan.');
+        }
+        $owner = $this->userModel->where('role', 'owner')->first();
+        $companyLogo = !empty($owner['company_logo']) ? base_url($owner['company_logo']) : base_url('assets/img/logo_.png');
+        $companyName = $owner['company_name'] ?? 'Nama Perusahaan';
+        $companyAddress = $owner['address'] ?? '';
+        $namaPenerima = !empty($owner['nama_sekretaris_bendahara']) ? $owner['nama_sekretaris_bendahara'] : ($owner['full_name'] ?? '—');
+        $data = [
+            'saving' => $saving,
+            'company_logo_url' => $companyLogo,
+            'company_name' => $companyName,
+            'company_address' => $companyAddress,
+            'nama_direktur' => $namaPenerima,
+            'title' => 'Kwitansi Tabungan - ' . $saving['name'],
+        ];
+        return view('owner/print/tabungan_receipt', $data);
+    }
+
     public function addDeposit($id)
     {
         if (session()->get('role') != 'owner') {
@@ -194,6 +304,100 @@ class Tabungan extends BaseController
             return redirect()->to("owner/tabungan/deposit/{$travelSavingId}")->with('error', 'Gagal menyimpan setoran.');
         }
         return redirect()->to("owner/tabungan/deposit/{$travelSavingId}")->with('msg', 'Setoran berhasil ditambahkan.');
+    }
+
+    /**
+     * Form edit setoran (owner).
+     */
+    public function editDeposit($depositId)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+        $deposit = $this->depositModel->find($depositId);
+        if (!$deposit) {
+            return redirect()->to('owner/tabungan')->with('error', 'Setoran tidak ditemukan.');
+        }
+        $saving = $this->savingModel->find($deposit['travel_saving_id']);
+        if (!$saving || $saving['status'] !== 'menabung') {
+            return redirect()->to('owner/tabungan')->with('error', 'Data tabungan tidak ditemukan atau sudah diklaim.');
+        }
+        $saving['agency_name'] = $this->userModel->find($saving['agency_id'])['full_name'] ?? '-';
+        $data = [
+            'deposit' => $deposit,
+            'saving' => $saving,
+            'title' => 'Edit Setoran',
+        ];
+        return view('owner/tabungan/deposit_edit', $data);
+    }
+
+    /**
+     * Update setoran (owner). Setelah update, recalc total_balance tabungan.
+     */
+    public function updateDeposit($depositId)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+        $deposit = $this->depositModel->find($depositId);
+        if (!$deposit) {
+            return redirect()->to('owner/tabungan')->with('error', 'Setoran tidak ditemukan.');
+        }
+        $travelSavingId = (int) $deposit['travel_saving_id'];
+        $saving = $this->savingModel->find($travelSavingId);
+        if (!$saving || $saving['status'] !== 'menabung') {
+            return redirect()->to('owner/tabungan')->with('error', 'Data tabungan tidak ditemukan atau sudah diklaim.');
+        }
+        $rules = [
+            'amount' => 'required|decimal|greater_than[0]',
+            'payment_date' => 'required|valid_date',
+        ];
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+        $amount = (float) str_replace(',', '', $this->request->getPost('amount'));
+        $proof = $deposit['proof'];
+        $file = $this->request->getFile('proof');
+        if ($file && $file->isValid() && !$file->hasMoved()) {
+            $dir = FCPATH . 'uploads/tabungan';
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            $proof = 'uploads/tabungan/' . $file->getRandomName();
+            $file->move($dir, basename($proof));
+        }
+        $this->depositModel->update($depositId, [
+            'amount' => $amount,
+            'payment_date' => $this->request->getPost('payment_date'),
+            'proof' => $proof,
+            'notes' => $this->request->getPost('notes') ?: null,
+        ]);
+        $newTotal = $this->depositModel->getTotalVerified($travelSavingId);
+        $this->savingModel->update($travelSavingId, ['total_balance' => $newTotal]);
+        return redirect()->to("owner/tabungan/deposit/{$travelSavingId}")->with('msg', 'Setoran berhasil diperbarui.');
+    }
+
+    /**
+     * Hapus setoran (owner). Recalc total_balance tabungan.
+     */
+    public function deleteDeposit($depositId)
+    {
+        if (session()->get('role') != 'owner') {
+            return redirect()->to('/login');
+        }
+        $deposit = $this->depositModel->find($depositId);
+        if (!$deposit) {
+            return redirect()->to('owner/tabungan')->with('error', 'Setoran tidak ditemukan.');
+        }
+        $travelSavingId = (int) $deposit['travel_saving_id'];
+        $saving = $this->savingModel->find($travelSavingId);
+        if (!$saving || $saving['status'] !== 'menabung') {
+            return redirect()->to('owner/tabungan')->with('error', 'Data tabungan tidak ditemukan atau sudah diklaim.');
+        }
+        $this->depositModel->delete($depositId);
+        $newTotal = $this->depositModel->getTotalVerified($travelSavingId);
+        $this->savingModel->update($travelSavingId, ['total_balance' => $newTotal]);
+        return redirect()->back()->with('msg', 'Setoran berhasil dihapus.');
     }
 
     /**
